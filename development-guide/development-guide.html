@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityTone Development Guide & Changelog</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.7;color:#c9d1d9;background:#0d1117}
+h1{color:#7fdbff;border-bottom:1px solid #30363d;padding-bottom:12px}
+h2{color:#4ecdc4;margin-top:2em}
+h3{color:#00e5ff}
+code{background:#161b22;padding:2px 6px;border-radius:4px;font-size:13px;color:#e94560}
+pre{background:#161b22;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5}
+a{color:#00e5ff;text-decoration:none}
+table{border-collapse:collapse;width:100%;margin:16px 0}
+th,td{border:1px solid #30363d;padding:8px 12px;text-align:left}
+th{background:#161b22;color:#7fdbff}
+.ver{border-left:3px solid #30363d;padding-left:16px;margin:16px 0}
+.ver-head{color:#f0f6fc;font-size:15px;margin-bottom:4px}
+.ver-date{color:#8b949e;font-size:12px}
+.ver ul{margin:8px 0;padding-left:18px}
+.ver li{margin:4px 0}
+</style>
+</head>
+<body>
+<h1>CityTone Development Guide & Changelog</h1>
+
+<h2>Version History</h2>
+
+<div class="ver">
+<div class="ver-head">v1.0 - CityTone</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Renamed from Audio Player to CityTone</li>
+<li>Removed 5 alternate visualization modes (Bars, Wave, Circle, Nebula, Pixel)</li>
+<li>Removed 4 theme options (Dark, Bright, Morphism, X-Ray), kept X-Ray as default</li>
+<li>Single cityscape visualization is now the only mode</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.1 - Music-Reactive Buildings</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Building windows dynamically turn on/off based on music frequency bands</li>
+<li>Near building windows cast water reflections</li>
+<li>Distant building windows twinkle with music energy</li>
+<li>All building types (factories, construction yards, cranes, harbors, TV towers, parks) now respond to music</li>
+<li>Removed isFactory gate that previously excluded industrial buildings from audio response</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.2 - Randomized Cityscape</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Building size ranges widened dramatically within each layer (e.g., layer 0: widths 3-18, heights 5-50)</li>
+<li>Overlap increased from 0-30% to 10-70% of building width</li>
+<li>60% of buildings now have zero gap for denser urban feel</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.3 - Weather Effects</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Added Tyndall effect (crepuscular god rays) for rain, fog, cloudy conditions</li>
+<li>12 animated rays emanating from sun position with per-ray intensity pulsing</li>
+<li>Scattered light haze around sun during Tyndall conditions</li>
+<li>Enhanced fog: 7-stop vertical gradient, 12 moving wisps, ground-level fog band</li>
+<li>Night-aware fog colors (gray by day, dark blue-gray at night)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.4 - Cruise Ship Easter Egg</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>350px gigantic cruise ship crosses the screen every 25-60 seconds</li>
+<li>Multi-tier superstructure: hull, deck, bridge, smokestack with red stripe</li>
+<li>48 cabin windows (16 across x 3 rows) with warm golden glow</li>
+<li>20 golden deck rail lights, 14 blue promenade lights</li>
+<li>Red/green navigation lights with synchronized blinking</li>
+<li>Forward spotlight beam and upward pool area spotlight</li>
+<li>Dual V-shaped wake lines trailing behind</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.5 - Seasons & Dynamic Lighting</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Season system: Spring, Summer, Autumn, Winter with smooth blending transitions</li>
+<li>Sky gradient colors interpolate per season via _getSeasonLerp()</li>
+<li>Spring cherry blossom petals, autumn falling leaves, winter frost sparkles</li>
+<li>Dynamic shadows: sun-angle-aware parallelogram shadows from buildings</li>
+<li>Golden hour warm overlay at dawn/dusk</li>
+<li>Season color tint and night ambient cool blue overlay</li>
+<li>Vignette darkening at edges, stronger at night</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.6 - Parks & Street Lamps</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Park building variant (21) with season-responsive vegetation</li>
+<li>Trees with green/orange/bare-branch canopies per season</li>
+<li>Bushes, park bench, winding path, spring flowers</li>
+<li>Street lamps on foreground road: poles, curved arms, light cones at night</li>
+<li>Water reflection pools from lamp glow</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.7 - Cloud & Boat Diversity</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>6 cloud types: Cumulus, Stratus, Cirrus, Cumulonimbus, Altocumulus, Cirrocumulus</li>
+<li>Each type has distinct puff sizes, shapes, altitudes, and movement speeds</li>
+<li>Sailboat ship type: curved hull, wooden mast, main sail, jib sail, waving flag</li>
+<li>Sailboat night cabin light with water reflection</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.8 - Train & Highway Alignment, Mobile & Playlist</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Fixed high-speed train to run ON the elevated highway viaduct (track Y aligned to highway Y=0.58)</li>
+<li>Removed redundant train viaduct drawing; highway surface is now the rail bed</li>
+<li>Added catenary poles and overhead wire for realism</li>
+<li>Moved train draw call after highway draw for correct z-ordering</li>
+<li>Mobile compatibility: viewport-fit=cover, safe-area insets, 44px touch targets</li>
+<li>Touch drag seeking on progress bar</li>
+<li>Save/Load playlist to localStorage (base64 encoded audio files)</li>
+<li>Auto-load saved playlist on app startup</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.9 - Bridge Arch & Diversified Trees</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Modern arch bridge easter egg: 3 styles (cable-stayed, parabolic arch, tied-arch)</li>
+<li>Bridges span from layer 1 to layer 3 ground level with correct depth ordering</li>
+<li>Cable-stayed: two towers with 17 fan cables each, aviation beacons</li>
+<li>Parabolic arch: single thick arch with 17 suspenders, golden illumination</li>
+<li>Tied-arch: arch below deck with vertical ties, traffic cars with headlights</li>
+<li>5 tree shapes in parks: round bushy, conical pine, columnar cypress, weeping willow, flat-topped</li>
+<li>Each tree gets a random shape per layer; winter branches also vary</li>
+<li>Autumn palette expanded to 5 colors (orange, red, amber, crimson, gold)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.10 - Sunset Palettes & Water Effects</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>6 randomized dawn/dusk color palettes: Rose-Magenta, Tropical Gold-Pink, Volcanic Red-Violet, Arctic Teal-Lavender, Desert Amber-Rose, Twilight Violet-Indigo</li>
+<li>Each palette controls sky gradient, golden hour overlay, and sun glow simultaneously</li>
+<li>Dawn and dusk get independent random palettes</li>
+<li>Water ripples: 4 expanding shapes (circles, wide ellipses, tall ellipses, diamonds)</li>
+<li>Each ripple has two concentric rings with sine-based alpha fade</li>
+<li>Tide system: slow random water level shift (every 600 frames, -6 to +6px)</li>
+<li>Wave-shaped surface: 3 overlapping sine functions creating organic undulation</li>
+<li>Primary and secondary wave crest highlights</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.11 - Stars & Weather Enhancement</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>120 stars with magnitude distribution (70% tiny, 20% medium, 10% large)</li>
+<li>Power-curve size and brightness correlation with scatter</li>
+<li>Color tints: 80% cool white, 10% warm yellow, 10% warm orange</li>
+<li>Glow halos on bright stars (>2px), soft circular glow at 15% opacity</li>
+<li>~35% of stars have short trailing streaks with two-stage fade</li>
+<li>Enhanced rain: 50% more particles, diagonal wind-angled strokes, mist streaks</li>
+<li>Enhanced thunderstorm: 50% more frequent lightning, stronger screen shake (5-8px)</li>
+<li>Enhanced snow: nearly doubled particles, star-shaped flakes, wind gusts, blizzard whiteout</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.12 - Water-Edge Structures & New Ships</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Jetty (variant 22, 8%): wooden pier with piles, deck, railing, mooring post, rope, small boat</li>
+<li>Seawall (variant 23, 6%): stone block pattern, coping cap, drainage pipes with drip, chain fence, algae</li>
+<li>Cargo ship easter egg: 200px, dark hull, 5 colored containers, crane boom, smoke funnel</li>
+<li>Tourist cruiser: 180px, white hull, glass observation decks, blue LED promenade, pool spotlight</li>
+<li>Ferry: 120px, flat-bottom, car deck with 4 tiny cars, twin exhaust stacks, vehicle ramp</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.13 - Fireworks, Ferris Wheel, Zeppelin</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Fireworks easter egg: 6 rockets with ascending trails, 25-45 particles per explosion</li>
+<li>Particles have gravity, drag, 3-stage fade (core, glow, trail), full-screen warm flash</li>
+<li>Rendered after all building layers for depth</li>
+<li>Ferris wheel: 60px diameter, 8 spokes, 8 colored gondolas, continuously rotating</li>
+<li>A-frame support, cross braces, base platform, 16 rainbow rim lights at night</li>
+<li>Zeppelin: 90px silver envelope, gondola with 4 windows, cables, cross tail fins</li>
+<li>Gentle sinusoidal bobbing, red blinking navigation beacons at night</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.14 - Playlist Optimization</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Large drop zone replaces empty playlist state with "Drop audio files here" and Browse Files button</li>
+<li>Quick-add bar at bottom of playlist panel with "Add Music" button always visible when tracks exist</li>
+<li>Drag-and-drop support directly on the playlist drop zone (not just on the canvas)</li>
+<li>Auto-opens playlist panel when first 3 tracks are added for immediate visibility</li>
+<li>Pressing Play with empty list opens the playlist panel before triggering file picker</li>
+<li>Drop zone highlights with cyan border and background on drag-over</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v1.15 - Intense Fireworks & Seamless Loop</div>
+<div class="ver-date">2026-07-15</div>
+<ul>
+<li>Fireworks frequency: every 20-50 seconds (was 50-100), show duration 350 frames (was 200)</li>
+<li>Up to 3 rockets launched simultaneously every 10 frames across full screen width</li>
+<li>Particle count per explosion: 40-80 (was 25-45), with longer life (30-65 frames) and wider spread</li>
+<li>Particle cap at 600 to prevent performance degradation</li>
+<li>Lower gravity (0.04) and higher drag (0.985) for wider, slower-falling bursts</li>
+<li>Fixed black screen bug: removed broken "backlog relief" skip that rendered without scene data</li>
+<li>Removed error canvas clear that caused black flash on caught exceptions</li>
+<li>Fixed waterTop ReferenceError in updateEasterEggs that crashed cargo/tourist/ferry ships</li>
+<li>Added dynH safety cap (max 500px) to prevent canvas overdraw from audio spikes</li>
+<li>Added window draw limits (50x80 cols/rows) to prevent nested loop explosion</li>
+<li>Added try/catch in render loop with automatic recovery</li>
+<li>Added visibilitychange handler to resume AudioContext and re-kick animation on tab focus</li>
+</ul>
+</div>
+
+<h2>Architecture</h2>
+<p>CityTone is a single-file application (<code>index.html</code>) containing all HTML, CSS, and JavaScript. No build tools or external dependencies are required.</p>
+
+<h3>Core Components</h3>
+<table>
+<tr><th>System</th><th>Description</th></tr>
+<tr><td>Celestial Engine</td><td>Sun/moon arc, day/night cycle, star field rotation, 6 sunset palettes</td></tr>
+<tr><td>City Generator</td><td>5 parallax layers with 24 building variants (incl. jetty, seawall), seeded RNG</td></tr>
+<tr><td>Audio Analyzer</td><td>Web Audio API FFT, 8 frequency bands, per-band energy</td></tr>
+<tr><td>Weather System</td><td>16 conditions, weighted neighbor transitions, enhanced particles</td></tr>
+<tr><td>Season System</td><td>4 seasons with smooth property interpolation, 5 tree shapes</td></tr>
+<tr><td>Water System</td><td>Tides, composite waves, 4 ripple shapes, reflections, sparkles</td></tr>
+<tr><td>Easter Egg Manager</td><td>12 easter eggs: UFO, airplane, asteroid, 4 ships, bridge, fireworks, wheel, zeppelin</td></tr>
+<tr><td>Traffic System</td><td>Road vehicles, boats (5 types), 4 easter-egg ships, high-speed train, elevated highways</td></tr>
+</table>
+
+<h2>Building Variants</h2>
+<table>
+<tr><th>ID</th><th>Type</th><th>Layers</th></tr>
+<tr><td>0-15</td><td>Standard skyscrapers (box, stepped, spire, antenna)</td><td>All</td></tr>
+<tr><td>16</td><td>Industrial facility (smokestacks, tanks)</td><td>1-3</td></tr>
+<tr><td>17</td><td>Construction yard (steel beams, crane arm)</td><td>4</td></tr>
+<tr><td>18</td><td>Tower crane</td><td>4</td></tr>
+<tr><td>19</td><td>Harbor/dock</td><td>4</td></tr>
+<tr><td>20</td><td>TV tower (beacons, observation deck)</td><td>2-4</td></tr>
+<tr><td>21</td><td>Park (trees, bushes, benches, paths)</td><td>2-4</td></tr>
+<tr><td>22</td><td>Jetty (piles, deck, railing, mooring post, boat)</td><td>4</td></tr>
+<tr><td>23</td><td>Seawall (stone blocks, pipes, chain fence, algae)</td><td>4</td></tr>
+</table>
+
+<h2>Cloud Types</h2>
+<table>
+<tr><th>ID</th><th>Type</th><th>Altitude</th><th>Characteristics</th></tr>
+<tr><td>0</td><td>Cumulus</td><td>Mid</td><td>Fluffy tall puffs, 4-8 puffs</td></tr>
+<tr><td>1</td><td>Stratus</td><td>Mid</td><td>Long flat layers, 5-10 puffs</td></tr>
+<tr><td>2</td><td>Cirrus</td><td>High</td><td>Wispy streaks, faster moving</td></tr>
+<tr><td>3</td><td>Cumulonimbus</td><td>Mid-Low</td><td>Towering, dark base, 1.3x scale</td></tr>
+<tr><td>4</td><td>Altocumulus</td><td>High</td><td>Small patches, mackerel sky</td></tr>
+<tr><td>5</td><td>Cirrocumulus</td><td>Very High</td><td>Tiny dots, very high altitude</td></tr>
+</table>
+
+<h2>Ship Types</h2>
+<table>
+<tr><th>Type</th><th>Width</th><th>Height</th><th>Speed</th><th>Description</th></tr>
+<tr><td>small</td><td>30</td><td>8</td><td>0.3</td><td>Trapezoid hull</td></tr>
+<tr><td>medium</td><td>50</td><td>12</td><td>0.2</td><td>Rectangular with cabin</td></tr>
+<tr><td>ship</td><td>80</td><td>16</td><td>0.15</td><td>Large with superstructure and mast</td></tr>
+<tr><td>speedboat</td><td>20</td><td>6</td><td>0.4</td><td>Angular pointed bow</td></tr>
+<tr><td>sailboat</td><td>25</td><td>10</td><td>0.18</td><td>Curved hull, mast, main sail, jib, flag</td></tr>
+</table>
+
+<h2>Easter Egg Ships</h2>
+<table>
+<tr><th>Type</th><th>Size</th><th>Speed</th><th>Key Features</th></tr>
+<tr><td>Cruise Ship</td><td>350x55</td><td>0.3</td><td>48 cabin windows, 20 deck lights, spotlight beams, dual wake</td></tr>
+<tr><td>Cargo Ship</td><td>200x30</td><td>0.25</td><td>5 colored containers, crane boom, smoke funnel, bridge house</td></tr>
+<tr><td>Tourist Cruiser</td><td>180x35</td><td>0.2</td><td>Glass decks, blue LEDs, pool spotlight, radar mast</td></tr>
+<tr><td>Ferry</td><td>120x20</td><td>0.35</td><td>Car deck, 4 tiny cars, twin stacks, vehicle ramp</td></tr>
+</table>
+
+<h2>Render Order</h2>
+<pre>
+drawSky &rarr; drawSunGlow &rarr; drawMoonGlow &rarr; drawSun &rarr; drawMoon
+&rarr; drawMountains &rarr; drawTyndallEffect &rarr; drawStars &rarr; drawClouds
+&rarr; drawEasterEggs (UFO, airplane, asteroid, bridge, ships, zeppelin, wheel)
+&rarr; drawBuildingLayer(0)
+&rarr; drawBuildingLayer(1)
+&rarr; drawBuildingLayer(2)
+&rarr; drawRoad
+&rarr; drawElevatedRoad(0.58) &larr; highway
+&rarr; drawTrain               &larr; runs ON the highway
+&rarr; drawBuildingLayer(3)
+&rarr; drawElevatedRoad(0.63) &larr; bridge with cables
+&rarr; drawBuildingLayer(4)
+&rarr; drawFireworks           &larr; rendered after buildings
+&rarr; drawForegroundRoad
+&rarr; drawWater &rarr; drawBoats
+&rarr; drawWeatherParticles &rarr; drawLightning &rarr; drawFog
+&rarr; drawDynamicShadows &rarr; drawDynamicLighting &rarr; drawSeasonParticles
+</pre>
+
+<h2>Adding a New Building Type</h2>
+<pre>
+// 1. Increase variant range in initBuildings
+var styleVariant=Math.floor(rng()*NEW_MAX);
+
+// 2. Assign variant with probability
+if(condition) styleVariant=NEW_ID;
+
+// 3. Add dispatch in drawBuildingLayer
+}else if(b.styleVariant===NEW_ID){
+  this._drawNewType(bx,by,b.w,dynH,...);
+}
+
+// 4. Implement draw function
+P._drawNewType=function(bx,by,bw,bh,groundY,nf){
+  // bh = dynH (music-reactive height)
+  // nf = nightFactor (0=day, 1=night)
+  // Use hsl()/hsla() for night-aware colors
+};
+</pre>
+
+<h2>Adding a New Easter Egg</h2>
+<pre>
+// 1. Add state object
+P.newEggState={x:0,y:0,visible:false,timer:0,dir:1};
+
+// 2. Initialize timer in initEasterEggs
+this.newEggState.timer=randi(MIN,MAX);
+
+// 3. Add update logic in updateEasterEggs
+var ne=this.newEggState;
+ne.timer--;
+if(!ne.visible&&ne.timer<=0){ ne.visible=true; ne.x=-400; ne.dir=1; }
+if(ne.visible){ ne.x+=ne.dir*0.3; /* bounds check */ }
+
+// 4. Add draw logic in drawEasterEggs (sky) or _drawFireworks (foreground)
+if(ne.visible){ /* render */ }
+</pre>
+
+<h2>Performance Guidelines</h2>
+<ul>
+<li>Cache gradients with cache keys to avoid recreating every frame</li>
+<li>Use <code>fillRect</code> over <code>arc</code> where possible (rectangles are faster)</li>
+<li>Limit particle counts and use early-exit conditions</li>
+<li>Music-reactive values use <code>_smoothEnergy</code> with lerp for smooth transitions</li>
+<li>Avoid creating objects inside the render loop</li>
+</ul>
+
+<h2>Color System</h2>
+<p>All colors use <code>hsl(h,s,l)</code> and <code>hsla(h,s,l,a)</code> helper functions. Night-aware rendering checks <code>nf</code> (nightFactor):</p>
+<pre>
+ctx.fillStyle=nf>0.5 ? hsl(220,8,22) : hsl(220,12,55);
+// Dark version for night, lighter for day
+</pre>
+
+<h2>Audio Response</h2>
+<p>The analyzer splits frequency data into 8 bands. Each building is assigned a band via <code>(i + layer*7) % 8</code>. The <code>_smoothEnergy</code> property on each building lerps toward the band energy for smooth animation:</p>
+<pre>
+var bandIdx=((i+li*7)&7);
+var bandEnergy=bands[bandIdx];
+b._smoothEnergy+=(bandEnergy-b._smoothEnergy)*0.35;
+dynH=b.h*clamp(0.3+b._smoothEnergy*2.2, 0.3, 2.5);
+</pre>
+
+<h2>File Structure</h2>
+<pre>
+CityTone/
+  index.html              Main application (single file)
+  README.md               Project overview and GitHub readme
+  dev.html                Development/testing build
+  citytone-intro/         Illustrated introduction page with screenshots
+  development-guide/
+    development-guide.html  This guide
+  screenshots/            App screenshots for documentation
+</pre>
+</body>
+</html>
