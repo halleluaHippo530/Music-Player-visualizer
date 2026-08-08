@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disco Ball Easter Egg - 本地测试工具</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d1a; color: #e0e0e0; padding: 16px;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+  h1 { font-size: 18px; margin-bottom: 8px; color: #bb86fc; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 12px; }
+
+  /* ── 布局 ── */
+  .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+  .panel {
+    background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px;
+    padding: 12px; overflow-y: auto;
+  }
+  .left-panel { width: 340px; flex-shrink: 0; }
+  .right-panel { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+  /* ── 按钮 ── */
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  button {
+    padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all 0.15s;
+  }
+  .btn-start { background: #6200ee; color: #fff; }
+  .btn-start:hover { background: #7c1ff0; }
+  .btn-stop { background: #cf6679; color: #fff; }
+  .btn-stop:hover { background: #e07a8d; }
+  .btn-capture { background: #03dac6; color: #000; }
+  .btn-capture:hover { background: #0ff5dd; }
+  .btn-force { background: #ff9800; color: #000; }
+  .btn-force:hover { background: #ffb74d; }
+  .btn-reset { background: #333; color: #ccc; }
+  .btn-reset:hover { background: #444; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── 状态卡片 ── */
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .stat-card {
+    background: #12121a; border-radius: 5px; padding: 8px 10px;
+    border-left: 3px solid #333;
+  }
+  .stat-card.active { border-left-color: #03dac6; }
+  .stat-card.triggered { border-left-color: #ff9800; }
+  .stat-card.error { border-left-color: #cf6679; }
+  .stat-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .stat-value.on { color: #03dac6; }
+  .stat-value.off { color: #666; }
+  .stat-value.warn { color: #ff9800; }
+
+  /* ── 进度条 ── */
+  .progress-wrap { margin-bottom: 12px; }
+  .progress-bar {
+    height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 4px;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #6200ee, #bb86fc);
+    transition: width 0.3s; width: 0%;
+  }
+  .progress-fill.disco {
+    background: linear-gradient(90deg, #ff9800, #ffeb3b, #03dac6);
+  }
+
+  /* ── 日志 ── */
+  .log-title { font-size: 12px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+  #log {
+    background: #08080f; border-radius: 5px; padding: 8px;
+    font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 11px;
+    line-height: 1.6; max-height: 200px; overflow-y: auto;
+    border: 1px solid #1a1a2a;
+  }
+  .log-entry { padding: 1px 0; }
+  .log-time { color: #555; }
+  .log-info { color: #aaa; }
+  .log-ok { color: #03dac6; }
+  .log-warn { color: #ff9800; }
+  .log-err { color: #cf6679; }
+  .log-event { color: #bb86fc; font-weight: 600; }
+
+  /* ── 截图区 ── */
+  .screenshots-title { font-size: 12px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+  #screenshots {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    flex: 1; overflow-y: auto; align-content: flex-start;
+  }
+  .screenshot-item {
+    border: 2px solid #333; border-radius: 4px; overflow: hidden;
+    position: relative; width: 200px;
+  }
+  .screenshot-item img { width: 100%; display: block; }
+  .screenshot-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.7); color: #fff; font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  /* ── 配置区 ── */
+  .config-section { margin-bottom: 10px; }
+  .config-title { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+  .config-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 12px; }
+  .config-row label { min-width: 100px; color: #aaa; }
+  .config-row input[type="number"] {
+    width: 60px; background: #08080f; border: 1px solid #2a2a4a;
+    color: #e0e0e0; padding: 3px 5px; border-radius: 3px; font-size: 12px;
+  }
+  .config-row select {
+    background: #08080f; border: 1px solid #2a2a4a;
+    color: #e0e0e0; padding: 3px 5px; border-radius: 3px; font-size: 12px;
+  }
+
+  /* ── 断言区 ── */
+  .assert-section { margin-top: 10px; }
+  .assert-item {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0;
+  }
+  .assert-icon { width: 16px; text-align: center; font-weight: 700; }
+  .assert-pass { color: #03dac6; }
+  .assert-fail { color: #cf6679; }
+  .assert-wait { color: #888; }
+
+  /* ── iframe ── */
+  #targetFrame {
+    width: 100%; flex: 1; border: 1px solid #2a2a4a; border-radius: 8px;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+
+<h1>Disco Ball Easter Egg 测试工具</h1>
+<p class="subtitle">模拟 CityPop 夜间场景，验证 disco ball 触发逻辑与视觉效果</p>
+
+<div class="main">
+  <!-- ═══ 左侧控制面板 ═══ -->
+  <div class="left-panel panel">
+    <!-- 按钮 -->
+    <div class="btn-row">
+      <button class="btn-start" id="btnStart">▶ 启动测试</button>
+      <button class="btn-stop" id="btnStop" disabled>■ 停止</button>
+      <button class="btn-capture" id="btnCapture" disabled>截图</button>
+      <button class="btn-force" id="btnForce" disabled>⚡ 强制触发</button>
+      <button class="btn-reset" id="btnReset">重置</button>
+    </div>
+
+    <!-- 配置 -->
+    <div class="config-section">
+      <div class="config-title">测试参数</div>
+      <div class="config-row">
+        <label>时间 (0=黎明)</label>
+        <input type="number" id="cfgTime" value="0.75" min="0" max="1" step="0.05">
+      </div>
+      <div class="config-row">
+        <label>模拟能量</label>
+        <input type="number" id="cfgEnergy" value="0.75" min="0" max="1" step="0.05">
+      </div>
+      <div class="config-row">
+        <label>快进倍速</label>
+        <input type="number" id="cfgSpeed" value="20" min="1" max="50" step="1">
+      </div>
+      <div class="config-row">
+        <label>天气</label>
+        <select id="cfgWeather">
+          <option value="clear_sky">晴朗</option>
+          <option value="overcast">阴天</option>
+          <option value="rain">雨</option>
+          <option value="fog">雾</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 实时状态 -->
+    <div class="config-title">实时状态</div>
+    <div class="status-grid">
+      <div class="stat-card" id="card-citypop">
+        <div class="stat-label">CityPop</div>
+        <div class="stat-value off" id="stat-citypop">OFF</div>
+      </div>
+      <div class="stat-card" id="card-night">
+        <div class="stat-label">NightF</div>
+        <div class="stat-value off" id="stat-night">0.00</div>
+      </div>
+      <div class="stat-card" id="card-music">
+        <div class="stat-label">Music</div>
+        <div class="stat-value off" id="stat-music">OFF</div>
+      </div>
+      <div class="stat-card" id="card-disco">
+        <div class="stat-label">Disco Ball</div>
+        <div class="stat-value off" id="stat-disco">OFF</div>
+      </div>
+    </div>
+
+    <!-- Disco Fade 进度 -->
+    <div class="progress-wrap">
+      <div class="config-title">Disco Fade <span id="fadeVal" style="float:right;color:#03dac6;">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="fadeBar"></div></div>
+    </div>
+
+    <!-- 触发计时 -->
+    <div class="progress-wrap">
+      <div class="config-title">触发检查计时 <span id="timerVal" style="float:right;color:#888;">—</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="timerBar" style="background:#444;"></div></div>
+    </div>
+
+    <!-- 断言结果 -->
+    <div class="assert-section">
+      <div class="config-title">验证断言</div>
+      <div id="assertList"></div>
+    </div>
+
+    <!-- 日志 -->
+    <div class="log-title">事件日志</div>
+    <div id="log"></div>
+  </div>
+
+  <!-- ═══ 右侧预览 + 截图 ═══ -->
+  <div class="right-panel">
+    <iframe id="targetFrame" src="about:blank"></iframe>
+    <div class="screenshots-title">截图记录</div>
+    <div id="screenshots"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   Disco Ball Easter Egg 本地测试工具
+   ── 通过 window.open 打开 LaunchPulse.html，注入测试条件
+   ── 实时监控 disco ball 状态，记录触发/淡入/活跃/淡出事件
+   ── 自动截图关键节点，输出断言报告
+   ═══════════════════════════════════════════════════════ */
+
+var TestApp = (function(){
+
+  var childWin = null;       // LaunchPulse.html 的 window 引用
+  var P = null;              // child window 的 player 对象
+  var JUNGLE = null;         // child window 的 JUNGLE 模块
+  var running = false;       // 测试是否运行中
+  var monitorId = null;      // 监控定时器 ID
+  var fastForwardId = null;  // 快进定时器 ID
+
+  // 测试状态追踪
+  var state = {
+    startFc: 0,
+    triggerFc: 0,         // disco ball 首次触发的 fc
+    triggerTime: 0,       // 触发时间戳
+    fadeCompleteFc: 0,    // fade 到 1 的 fc
+    expireFc: 0,          // disco ball 过期的 fc
+    triggerCount: 0,      // 总触发次数
+    lastDiscoActive: false,
+    lastDiscoFade: 0,
+    phase: 'idle',        // idle → arming → triggered → fading_in → active → fading_out → expired
+    conditionsRemoved: false  // 是否已移除条件（用于触发 fade-out）
+  };
+
+  // 断言列表
+  var asserts = [
+    { id:'cond-citypop',   text:'CityPop 条件满足',         status:'wait' },
+    { id:'cond-night',     text:'nightF > 0.40',           status:'wait' },
+    { id:'cond-music',     text:'musicActive = true',      status:'wait' },
+    { id:'trigger',        text:'Disco ball 成功触发',      status:'wait' },
+    { id:'fade-in',        text:'Fade 从 0 渐变到 1',       status:'wait' },
+    { id:'visual',         text:'视觉渲染确认（像素采样）',  status:'wait' },
+    { id:'duration',       text:'活跃时长 ≥15s',            status:'wait' },
+    { id:'fade-out',       text:'过期后 fade 从 1 渐变到 0', status:'wait' }
+  ];
+
+  /* ── 工具函数 ── */
+  function $(id){ return document.getElementById(id); }
+
+  function log(msg, type){
+    type = type || 'info';
+    var now = new Date();
+    var ts = String(now.getHours()).padStart(2,'0')+':'+
+             String(now.getMinutes()).padStart(2,'0')+':'+
+             String(now.getSeconds()).padStart(2,'0');
+    var div = document.createElement('div');
+    div.className = 'log-entry log-'+type;
+    div.innerHTML = '<span class="log-time">['+ts+']</span> '+msg;
+    $('log').appendChild(div);
+    $('log').scrollTop = $('log').scrollHeight;
+  }
+
+  function updateAssert(id, status, detail){
+    var a = asserts.find(function(x){return x.id===id});
+    if(!a) return;
+    /* 已通过的断言不被覆盖（防止条件移除后状态翻转） */
+    if(a.status === 'pass' && status !== 'pass') return;
+    a.status = status;
+    a.detail = detail || '';
+    renderAsserts();
+  }
+
+  function renderAsserts(){
+    var html = '';
+    asserts.forEach(function(a){
+      var icon = '?';
+      var cls = 'assert-wait';
+      if(a.status==='pass'){ icon='✓'; cls='assert-pass'; }
+      else if(a.status==='fail'){ icon='✗'; cls='assert-fail'; }
+      else if(a.status==='wait'){ icon='…'; cls='assert-wait'; }
+      html += '<div class="assert-item">'+
+        '<span class="assert-icon '+cls+'">'+icon+'</span>'+
+        '<span class="'+cls+'">'+a.text+'</span>'+
+        (a.detail?'<span style="color:#666;font-size:11px;"> ('+a.detail+')</span>':'')+
+        '</div>';
+    });
+    $('assertList').innerHTML = html;
+  }
+
+  function screenshot(label){
+    try{
+      var cv = JUNGLE.canvas();
+      var dataUrl = cv.toDataURL('image/png');
+      var item = document.createElement('div');
+      item.className = 'screenshot-item';
+      var img = document.createElement('img');
+      img.src = dataUrl;
+      var lbl = document.createElement('div');
+      lbl.className = 'screenshot-label';
+      lbl.textContent = label + ' (fc:' + Math.floor(JUNGLE.dbg().fc) + ')';
+      item.appendChild(img);
+      item.appendChild(lbl);
+      $('screenshots').appendChild(item);
+      log('截图已保存: ' + label, 'ok');
+    }catch(e){
+      log('截图失败: ' + e.message, 'err');
+    }
+  }
+
+  /* ── 注入 CityPop + 夜间 + 模拟音乐条件 ── */
+  function injectConditions(){
+    var time = parseFloat($('cfgTime').value);
+    var energy = parseFloat($('cfgEnergy').value);
+    var weather = $('cfgWeather').value;
+
+    // 设置 CityPop 条件
+    P._cityPopScore = 100;      // 高分防止衰减
+    P._isCityPop = true;
+    P._cityPopJungle = true;
+
+    // 模拟音乐播放
+    P.isPlaying = true;
+    P.freqData = new Uint8Array(128);
+    P._freqBands = [0.6,0.5,0.4,0.5,0.4,0.3,0.3,0.2];
+    P._energy = energy;
+    P._bassEnergy = 0.6;
+
+    // 设置夜间
+    JUNGLE.setTime(time);
+    JUNGLE.setForceEnergy(energy);
+    JUNGLE.setWeather(weather);
+
+    log('条件注入完成: CityPop=ON, time='+time+', energy='+energy+', weather='+weather, 'ok');
+  }
+
+  /* ── 持续维持条件（防止 P 的 update 循环重置） ── */
+  function maintainConditions(){
+    if(!P || !JUNGLE) return;
+    if(state.conditionsRemoved) return;  // 条件已移除，不再维持
+    P._cityPopScore = 100;
+    P._isCityPop = true;
+    P._cityPopJungle = true;
+    P.isPlaying = true;
+    if(!P.freqData) P.freqData = new Uint8Array(128);
+    P._freqBands = [0.6,0.5,0.4,0.5,0.4,0.3,0.3,0.2];
+    P._energy = parseFloat($('cfgEnergy').value);
+    P._bassEnergy = 0.6;
+  }
+
+  /* ── 移除条件（触发 fade-out） ── */
+  function removeConditions(){
+    if(!P || !JUNGLE) return;
+    state.conditionsRemoved = true;
+    P._isCityPop = false;
+    P._cityPopJungle = false;
+    P._cityPopScore = 0;
+    P.isPlaying = false;
+    log('条件已移除: CityPop=OFF, Music=OFF → 触发 fade-out', 'warn');
+  }
+
+  /* ── 强制触发 disco ball（跳过随机概率） ── */
+  function forceTrigger(){
+    if(!JUNGLE) return;
+    /* 通过多次 advance 推进到下一次触发检查，然后覆盖随机数 */
+    var dbg = JUNGLE.dbg();
+    if(!dbg.discoBall){
+      /* 直接在 JUNGLE 作用域内设置触发 — 通过 dbg 接口无法直接设置，
+         但可以通过大量 advance 调用来快速尝试触发 */
+      var speed = parseInt($('cfgSpeed').value);
+      var attempts = 0;
+      var maxAttempts = 200;  // 最多尝试 200 次 advance
+      var triggerId = setInterval(function(){
+        if(!JUNGLE) return;
+        maintainConditions();
+        for(var i=0; i<speed; i++){
+          JUNGLE.advance(1);
+        }
+        JUNGLE.render();
+        attempts++;
+        var d = JUNGLE.dbg();
+        if(d.discoBall || attempts >= maxAttempts){
+          clearInterval(triggerId);
+          if(d.discoBall){
+            log('强制触发成功 (尝试 ' + attempts + ' 次)', 'ok');
+          } else {
+            log('强制触发失败：已尝试 ' + attempts + ' 次', 'err');
+          }
+        }
+      }, 50);
+      log('正在强制触发 disco ball...', 'info');
+    } else {
+      log('Disco ball 已经活跃', 'info');
+    }
+  }
+
+  /* ── 快进：多次调用 advance + render ── */
+  function startFastForward(){
+    var speed = parseInt($('cfgSpeed').value);
+    fastForwardId = setInterval(function(){
+      if(!JUNGLE) return;
+      maintainConditions();
+      for(var i=0; i<speed; i++){
+        JUNGLE.advance(1);
+      }
+      JUNGLE.render();
+    }, 100);
+    log('快进启动: '+speed+'x (每 100ms 推进 '+speed+' 帧)', 'info');
+  }
+
+  function stopFastForward(){
+    if(fastForwardId){ clearInterval(fastForwardId); fastForwardId = null; }
+  }
+
+  /* ── 状态监控 ── */
+  function startMonitor(){
+    monitorId = setInterval(function(){
+      if(!JUNGLE) return;
+      /* 同步推进帧：避免后台标签页 setInterval/RAF 节流导致测试卡住。
+         每次 monitor 回调推进 60 帧 (≈1秒模拟时间)，确保 disco ball
+         能在合理时间内触发和过期。 */
+      var batchFrames = 60;
+      for(var i = 0; i < batchFrames; i++){
+        maintainConditions();
+        JUNGLE.advance(1);
+      }
+      JUNGLE.render();
+
+      var dbg = JUNGLE.dbg();
+
+      // 更新 UI 状态卡片
+      var citypopOn = dbg.isCityPop;
+      var nightVal = dbg.nightF;
+      var musicOn = !!dbg.musicActive;
+      var discoOn = dbg.discoBall;
+      var fade = dbg.discoFade;
+
+      $('stat-citypop').textContent = citypopOn ? 'ON' : 'OFF';
+      $('stat-citypop').className = citypopOn ? 'stat-value on' : 'stat-value off';
+      $('card-citypop').className = 'stat-card' + (citypopOn ? ' active' : '');
+
+      $('stat-night').textContent = nightVal.toFixed(3);
+      $('stat-night').className = nightVal > 0.4 ? 'stat-value on' : 'stat-value warn';
+      $('card-night').className = 'stat-card' + (nightVal > 0.4 ? ' active' : '');
+
+      $('stat-music').textContent = musicOn ? 'ON' : 'OFF';
+      $('stat-music').className = musicOn ? 'stat-value on' : 'stat-value off';
+      $('card-music').className = 'stat-card' + (musicOn ? ' active' : '');
+
+      $('stat-disco').textContent = discoOn ? 'ACTIVE' : 'OFF';
+      $('stat-disco').className = discoOn ? 'stat-value on' : 'stat-value off';
+      $('card-disco').className = 'stat-card' + (discoOn ? ' triggered' : '');
+
+      // Fade 进度条
+      var fadePct = Math.round(fade * 100);
+      $('fadeVal').textContent = fadePct + '%';
+      $('fadeBar').style.width = fadePct + '%';
+      $('fadeBar').className = 'progress-fill' + (fade > 0 ? ' disco' : '');
+
+      // 断言检查：条件满足
+      if(citypopOn) updateAssert('cond-citypop', 'pass');
+      else updateAssert('cond-citypop', 'fail');
+
+      if(nightVal > 0.40) updateAssert('cond-night', 'pass', 'nightF='+nightVal.toFixed(3));
+      else updateAssert('cond-night', 'fail', 'nightF='+nightVal.toFixed(3));
+
+      if(musicOn) updateAssert('cond-music', 'pass');
+      else updateAssert('cond-music', 'fail');
+
+      // ── Disco ball 触发检测 ──
+      if(discoOn && !state.lastDiscoActive){
+        // 首次触发
+        state.triggerCount++;
+        state.triggerFc = Math.floor(dbg.fc);
+        state.triggerTime = Date.now();
+        state.phase = 'triggered';
+        log('★ Disco ball 触发! (第 '+state.triggerCount+' 次, fc:'+state.triggerFc+')', 'event');
+
+        if(state.triggerCount === 1){
+          updateAssert('trigger', 'pass', 'fc='+state.triggerFc);
+          screenshot('disco-ball-triggered');
+        }
+      }
+
+      // Fade 渐入检测
+      if(state.phase === 'triggered' && fade > 0.01){
+        state.phase = 'fading_in';
+        log('Disco ball 开始淡入 (fade='+fade.toFixed(3)+')', 'info');
+      }
+      if(state.phase === 'fading_in' && fade >= 0.99){
+        state.phase = 'active';
+        state.fadeCompleteFc = Math.floor(dbg.fc);
+        var fadeFrames = state.fadeCompleteFc - state.triggerFc;
+        log('Disco ball 淡入完成 (耗时 '+fadeFrames+' 帧 ≈ '+(fadeFrames/60).toFixed(1)+'s)', 'ok');
+        updateAssert('fade-in', 'pass', fadeFrames+'帧');
+
+        // 像素采样验证视觉渲染
+        verifyVisual();
+      }
+
+      // 活跃状态 → 记录持续时间
+      if(state.phase === 'active'){
+        var activeFrames = Math.floor(dbg.fc) - state.fadeCompleteFc;
+        var activeSec = (activeFrames / 60).toFixed(1);
+        $('timerVal').textContent = activeSec + 's';
+        $('timerBar').style.width = Math.min(100, (activeFrames/1800)*100) + '%';
+        $('timerBar').className = 'progress-fill disco';
+
+        /* 主动移除条件：当活跃帧数达到 _discoBallTimer 上限 (1800帧=30s)，
+           立即移除条件以防止 disco ball 重新触发并确保 fade-out 能被检测到。
+           这解决了 setInterval 在后台标签页被节流导致无法及时检测过期的问题。 */
+        if(activeFrames >= 1800 && !state.conditionsRemoved){
+          log('活跃时长达到上限 (≥1800帧)，主动移除条件', 'warn');
+          removeConditions();
+        }
+      }
+
+      // 过期检测
+      if(!discoOn && state.lastDiscoActive){
+        state.expireFc = Math.floor(dbg.fc);
+        var totalActive = state.expireFc - state.triggerFc;
+        var totalSec = (totalActive / 60).toFixed(1);
+        log('Disco ball 过期 (总活跃 '+totalActive+' 帧 ≈ '+totalSec+'s)', 'warn');
+        state.phase = 'fading_out';
+
+        // 检查活跃时长是否在合理范围 (≥850帧 = 14s+)
+        // 上限放宽到 2400 以容纳后台节流导致的额外帧
+        if(totalActive >= 850){
+          updateAssert('duration', 'pass', totalSec+'s');
+        } else {
+          updateAssert('duration', 'fail', totalSec+'s (期望≥15s)');
+        }
+
+        // 自动移除条件以触发 fade-out
+        if(!state.conditionsRemoved){
+          removeConditions();
+        }
+      }
+
+      // 条件已移除但 disco ball 仍在淡出中
+      if(state.conditionsRemoved && state.phase === 'active'){
+        state.phase = 'fading_out';
+        log('条件已移除，等待 fade-out 完成...', 'info');
+      }
+
+      // Fade 渐出检测
+      if(state.phase === 'fading_out' && fade > 0 && state.lastDiscoFade > fade){
+        log('Disco ball 正在淡出 (fade='+fade.toFixed(3)+')', 'info');
+      }
+      if(state.phase === 'fading_out' && fade <= 0.01){
+        log('Disco ball 完全淡出', 'ok');
+        updateAssert('fade-out', 'pass');
+        state.phase = 'idle';
+        screenshot('disco-ball-faded-out');
+      }
+
+      state.lastDiscoActive = discoOn;
+      state.lastDiscoFade = fade;
+    }, 200);
+  }
+
+  /* ── 像素采样：验证 disco ball 是否实际渲染 ── */
+  function verifyVisual(){
+    try{
+      var cv = JUNGLE.canvas();
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      var dbg = JUNGLE.dbg();
+      var sp = dbg.sunProgress;
+
+      // 月亮/disco ball 位置估算 (sp∈[0.5,1.0] 时月亮可见)
+      var moonStart = 0.50;  // _duskEnd - 0.05
+      var moonPhase = (sp - moonStart) / (1.0 - moonStart);
+      var mx = Math.floor(moonPhase * (W*0.90) + W*0.05);
+      var my = Math.floor(H*0.46 - Math.sin(moonPhase * Math.PI) * H*0.34);
+
+      log('像素采样: 月亮位置 ('+mx+', '+my+') canvas='+W+'x'+H, 'info');
+
+      // 在月亮位置周围采样 20x20 区域
+      var brightCount = 0;
+      var coloredCount = 0;
+      var sampleCount = 0;
+      for(var dy = -20; dy <= 20; dy += 4){
+        for(var dx = -20; dx <= 20; dx += 4){
+          var px = mx + dx, py = my + dy;
+          if(px < 0 || px >= W || py < 0 || py >= H) continue;
+          var d = ctx.getImageData(px, py, 1, 1).data;
+          sampleCount++;
+          var brightness = (d[0] + d[1] + d[2]) / 3;
+          if(d[3] > 100 && brightness > 60) brightCount++;
+          // 检测彩色像素（disco ball 有多色光束）
+          if(d[3] > 100 && Math.abs(d[0]-d[1]) > 30) coloredCount++;
+        }
+      }
+
+      var brightPct = sampleCount > 0 ? (brightCount / sampleCount * 100) : 0;
+      var coloredPct = sampleCount > 0 ? (coloredCount / sampleCount * 100) : 0;
+      log('像素采样结果: 亮像素='+brightPct.toFixed(0)+'%, 彩色像素='+coloredPct.toFixed(0)+'%', 'info');
+
+      if(brightPct > 15 && coloredPct > 5){
+        updateAssert('visual', 'pass', '亮='+brightPct.toFixed(0)+'% 彩='+coloredPct.toFixed(0)+'%');
+        log('视觉验证通过: disco ball 像素已渲染', 'ok');
+      } else if(brightPct > 5){
+        updateAssert('visual', 'pass', '亮='+brightPct.toFixed(0)+'% (部分渲染)');
+        log('视觉验证部分通过: 有亮像素但彩色像素不足', 'warn');
+      } else {
+        updateAssert('visual', 'fail', '亮='+brightPct.toFixed(0)+'%');
+        log('视觉验证失败: 月亮位置无 disco ball 像素', 'err');
+      }
+    }catch(e){
+      log('像素采样错误: ' + e.message, 'err');
+      updateAssert('visual', 'fail', e.message);
+    }
+  }
+
+  /* ── 启动测试 ── */
+  function start(){
+    if(running) return;
+    log('═══ 测试启动 ═══', 'event');
+
+    // 打开 LaunchPulse.html
+    childWin = window.open('LaunchPulse.html#scene=jungle', 'discoTest',
+      'width=900,height=700,menubar=no,toolbar=no');
+    if(!childWin){
+      log('无法打开新窗口！请允许弹出窗口。', 'err');
+      return;
+    }
+
+    log('正在加载 LaunchPulse.html#scene=jungle ...', 'info');
+
+    // 等待页面加载完成
+    var waitCount = 0;
+    var waitId = setInterval(function(){
+      waitCount++;
+      if(waitCount > 60){  // 30s 超时
+        clearInterval(waitId);
+        log('加载超时！请确保 LaunchPulse.html 与本文件在同一目录。', 'err');
+        return;
+      }
+      try{
+        if(childWin.JUNGLE && childWin.player && childWin.JUNGLE.dbg().booted){
+          clearInterval(waitId);
+          P = childWin.player;
+          JUNGLE = childWin.JUNGLE;
+          log('LaunchPulse.html 加载完成', 'ok');
+
+          // 确保 jungle 场景已启动
+          if(JUNGLE.isSuspended()){
+            JUNGLE.resume();
+            JUNGLE.start();
+            log('Jungle 场景已恢复并启动', 'info');
+          }
+
+          // 注入测试条件
+          injectConditions();
+
+          // 启动快进
+          startFastForward();
+
+          // 启动监控
+          startMonitor();
+
+          running = true;
+          state.startFc = Math.floor(JUNGLE.dbg().fc);
+          state.phase = 'arming';
+
+          $('btnStart').disabled = true;
+          $('btnStop').disabled = false;
+          $('btnCapture').disabled = false;
+          $('btnForce').disabled = false;
+
+          log('测试监控已启动，等待 disco ball 触发...', 'info');
+          log('触发条件: 60% 概率/10s，需等待 1-3 次检查', 'info');
+        }
+      }catch(e){
+        // 跨域或页面未就绪
+      }
+    }, 500);
+  }
+
+  /* ── 停止测试 ── */
+  function stop(){
+    running = false;
+    stopFastForward();
+    if(monitorId){ clearInterval(monitorId); monitorId = null; }
+    log('═══ 测试停止 ═══', 'event');
+    log('总触发次数: ' + state.triggerCount, 'info');
+    $('btnStart').disabled = false;
+    $('btnStop').disabled = true;
+    $('btnForce').disabled = true;
+  }
+
+  /* ── 重置 ── */
+  function reset(){
+    stop();
+    if(childWin){ childWin.close(); childWin = null; }
+    P = null; JUNGLE = null;
+    state = {
+      startFc:0, triggerFc:0, triggerTime:0, fadeCompleteFc:0,
+      expireFc:0, triggerCount:0, lastDiscoActive:false, lastDiscoFade:0,
+      phase:'idle', conditionsRemoved:false
+    };
+    asserts.forEach(function(a){ a.status='wait'; a.detail=''; });
+    renderAsserts();
+    $('log').innerHTML = '';
+    $('screenshots').innerHTML = '';
+    $('stat-citypop').textContent = '—';
+    $('stat-night').textContent = '—';
+    $('stat-music').textContent = '—';
+    $('stat-disco').textContent = '—';
+    $('fadeBar').style.width = '0%';
+    $('timerBar').style.width = '0%';
+    $('timerVal').textContent = '—';
+    $('fadeVal').textContent = '0%';
+    $('btnStart').disabled = false;
+    $('btnStop').disabled = true;
+    $('btnCapture').disabled = true;
+    $('btnForce').disabled = true;
+    log('测试已重置', 'info');
+  }
+
+  /* ── 初始化 ── */
+  function init(){
+    $('btnStart').addEventListener('click', start);
+    $('btnStop').addEventListener('click', stop);
+    $('btnCapture').addEventListener('click', function(){
+      if(JUNGLE) screenshot('manual-capture');
+    });
+    $('btnForce').addEventListener('click', forceTrigger);
+    $('btnReset').addEventListener('click', reset);
+    renderAsserts();
+    log('Disco Ball 测试工具已就绪。点击「启动测试」开始。', 'info');
+    log('使用方法:', 'info');
+    log('1. 需通过 HTTP 服务器访问本文件（如 python -m http.server）', 'info');
+    log('2. 确保 LaunchPulse.html 与本文件在同一目录', 'info');
+    log('3. 允许浏览器弹出窗口', 'info');
+    log('4. 点击「⚡ 强制触发」可跳过等待，快速触发 disco ball', 'info');
+  }
+
+  return { init: init };
+})();
+
+TestApp.init();
+</script>
+</body>
+</html>

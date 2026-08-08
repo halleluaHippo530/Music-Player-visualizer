@@ -28,6 +28,124 @@ th{background:#161b22;color:#7fdbff}
 <h2>Version History</h2>
 
 <div class="ver">
+<div class="ver-head">v5.1.4 - Horizontal Button Layout & Disco Ball Animation Smoothness</div>
+<div class="ver-date">2026-08-08</div>
+<ul>
+<li><strong>Horizontal button alignment</strong>: Wrapped <code>#cpJungleHint</code> and <code>#cpCityToggle</code> in a flex container (<code>.cp-toggle-bar</code>) so they display side-by-side in the top-right corner instead of vertically stacked. Container visibility managed in <code>_updateCityPopHint()</code></li>
+<li><strong>Disco ball stop-motion fix</strong>: Added <code>_IVL_DISCO={bg:6,mid:4,hill:4,anim:1}</code> — when disco ball is active, anim layer refreshes every frame (was every 2) and hill layer every 4 frames (was every 8), eliminating the stop-motion feeling for crocodiles, lotus, gibbons, and all anim-layer objects</li>
+<li><strong>Increased refresh cap during disco</strong>: <code>_maxRefresh</code> raised from 3 to 4 when disco ball is active, allowing all 4 cache layers to refresh without starvation</li>
+<li><strong>FX throttling bypass during disco</strong>: <code>drawFlowerSparkles</code>, <code>drawTempleMorphGlow</code>, and <code>drawTempleMonkeys</code> now run every frame (not every 2nd) when <code>_discoBallFade &gt; 0.02</code>, via <code>_discoSmooth</code> flag in <code>drawMusicFX()</code></li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v5.1.3 - CityTone Toggle & Dead Code Removal</div>
+<div class="ver-date">2026-08-08</div>
+<ul>
+<li><strong>CityTone toggle button</strong>: New <code>#cpCityToggle</code> button appears in top-right corner when disco ball is active in jungle mode at night — lets users switch from jungle to citytone scene during disco ball events. Uses <code>JUNGLE.discoActive()</code> lightweight accessor to check disco ball state without allocating <code>dbg()</code> objects</li>
+<li><strong>Dead code removal</strong>: Removed 354 lines of suspended Godzilla subsystem — state definition, init, trigger logic, sprite loader (<code>_initGodzillaSprite</code>), sprite slicer (<code>_sliceGodzilla</code>), fallback parts, pose calculator (<code>_computeGZPose</code>), body drawer (<code>_drawGodzillaBody</code>), effects drawer (<code>_drawGodzillaEffects</code>), and render-loop draw calls. All code was permanently suspended (<code>gz.suspended=true</code>) and never executed</li>
+<li><strong>Tree self-illumination verified</strong>: Confirmed CityPop disco self-illumination correctly gates on <code>_isCityPop &amp;&amp; _discoBallFade &gt; 0.02</code>, which requires night time (<code>nightF &gt; 0.40</code>) and disco ball visible in sky</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v5.1.2 - Jungle Hill & Forest Layer Performance</div>
+<div class="ver-date">2026-08-07</div>
+<ul>
+<li><strong>_crown() dither optimization</strong>: Increased dither cell size (4-9x fewer fillRects), raised early-return threshold, reduced sub-blob count — hill layer 44ms&rarr;26ms (41% faster)</li>
+<li><strong>drawHills() element reduction</strong>: Tree count halved (1 per hill), rock count reduced 43%, thornbush count reduced 50%, type distribution biased toward cheaper trees</li>
+<li><strong>drawBurningTrees() batching</strong>: All 'lighter' glow rects batched into single save/restore</li>
+<li><strong>Result</strong>: Overall 24ms&rarr;14.5ms avg (40% faster, 41&rarr;69 FPS)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v5.1.1 - Jungle Music Mode FX Optimization</div>
+<div class="ver-date">2026-08-07</div>
+<ul>
+<li><strong>drawMusicFX composite batching</strong>: Single save/restore + 'lighter' composite for all 9 FX functions (was 9 separate save/restore calls)</li>
+<li><strong>FX throttling</strong>: Heavy functions (drawFlowerSparkles, drawTempleMorphGlow, drawTempleMonkeys) throttled to every 2nd frame</li>
+<li><strong>Element count reductions</strong>: Temple monkeys ~50% fewer, flower sparkles 30&rarr;15 max active</li>
+<li><strong>Render composite batching</strong>: 4 screen-blend overlays batched into single save/restore</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v5.1 - Adaptive Audio & Disco Pitfire</div>
+<div class="ver-date">2026-08-06</div>
+<ul>
+<li><strong>Adaptive beat detection</strong>: Rolling bass baseline (<code>_bassBaseline</code>, lerp 0.012/frame) adapts to quiet/loud tracks — triggers beats when bass exceeds <code>max(absoluteThreshold, baseline * beatRatio)</code></li>
+<li><strong>Audio-driven weather</strong>: <code>_audioRainAccum</code> triggers rain after 3s sustained rainEnergy, heavy rain after 5s, with anti-flicker override running after <code>_tickWeather</code></li>
+<li><strong>Waterfall flow boost</strong>: <code>riverEnergy</code> drives width (<code>flowBoost = 1 + 0.6*riverEnergy</code>) and foam speed (<code>foamSpd = 2.6*(1+2.0*riverEnergy)</code>)</li>
+<li><strong>Disco pitfire gathering</strong>: Gorillas (P2*2.5), monkeys (P2*1.2), gibbons (P2*1.8) gather around campfire in foreground layer when disco ball activates — pixel art, per-frame animation, beat-synced bounce</li>
+<li><strong>Firefly spark patterns</strong>: Firebugs form disco ball reflection spark patterns during disco event</li>
+<li><strong>Bat spotlight system</strong>: Bats/parrots drop colored cone spotlights on gorillas when flying overhead — 6 rotating colors, beat-synced pulse</li>
+<li><strong>Disco illumination boost</strong>: Warm ground glow, sky shimmer, and increased ambient brightness during disco event</li>
+<li><strong>Performance: hill layer optimization</strong>: <code>_IVL_MUSIC.hill</code> raised 4&rarr;6, element caps (rocks:7, trees:2, bushes:4), removed banned <code>_frameBudget</code> — refresh time 109ms &rarr; 23-57ms</li>
+<li><strong>Stop-motion fix</strong>: Per-frame music FX overlay in <code>drawMusicFX()</code> for all audio-reactive effects (disco spotlights, tree morph, flower bloom, temple glow, animal animation)</li>
+<li><strong>ToneSync package-ready</strong>: Self-contained IIFE with clean public API, fixed idle energy bug, added <code>_timeAccum</code> accumulator, <code>_bassBaseline</code> reset in <code>reset()</code></li>
+<li><strong>Code cleanup</strong>: Removed dead variables (<code>_sustainedMid</code>, <code>_sustainedHigh</code>, <code>_sustainedBass</code>, <code>_beatRate</code>, <code>_prevBass</code>, <code>_beatCooldown</code>) and unused functions (<code>fbm2()</code>, <code>pxBandGrad()</code>)</li>
+<li><strong>Batch idle decay</strong>: Grouped <code>Math.pow</code> calls into shared variables during idle for reduced function call overhead</li>
+<li><strong>Documentation</strong>: Added comprehensive development manual and prompt development manual</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v5.0 - Epic Wide-Screen Jungle</div>
+<div class="ver-date">2026-08-01</div>
+<ul>
+<li><strong>Epic wide-screen scaling</strong>: pixel budget raised from 1.3M to 2.5M cap, with new <code>_wideScale</code> factor (clamp(ar/1.78, 1.0, 2.2)) that gives wider screens proportionally more pixels for crisp, non-stretched landscapes</li>
+<li>Element counts (clouds, stars, rain, fireflies, parrots, butterflies, mist, leaves, moon glints) now scale with both <code>_resScale</code> AND <code>_wideScale</code> for densely populated wide vistas</li>
+<li>Horizon lowers on ultra-wide displays (0.46 → 0.42) for more dramatic sky and sunset/sunrise vistas</li>
+<li>Waterfall period shortens on wide screens (W*3 → W*2.2) so more falls are visible simultaneously</li>
+<li>Layer refresh cap raised to 4 on wide screens (<code>_maxRefresh</code>) for smoother scrolling across larger canvases</li>
+<li>Performance: <code>_resScale</code> clamp raised to 4.0, <code>_wideScale</code> drives both budget and element density</li>
+<li>Applied to both <code>jungle-dev.html</code> (standalone dev) and <code>LaunchPulse.html</code> (integrated 3-scene player)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v4.0 - 3-Scene Auto-Detection + Jungle Integration</div>
+<div class="ver-date">2026-08-01</div>
+<ul>
+<li><strong>3 scenes</strong>: CityTone, Universe, Jungle — auto-detected from music style, tone, and rhythm</li>
+<li>Scene detection: nature sounds → Jungle, meditation/calm → Universe, other → City (90-frame evaluation window)</li>
+<li>Idle scene cycling: auto-cycles City → Galaxy → Jungle every ~10s when no music plays</li>
+<li>~0.6s cross-fade transitions between scenes with continuous scrolling during transitions</li>
+<li>Scene switch buttons removed; scenes change automatically by music</li>
+<li>Jungle module replaced with superior <code>jungle-dev.html</code> version (P-based audio coupling, resilient error handling)</li>
+<li>Meditation music detection: 5-criteria analysis (energy, bass ratio, smoothness, dynamic range, beat absence)</li>
+<li>Visualizer stability: resilient error handling in both main and JUNGLE loops (log + continue, never kill rAF chain)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v3.0 - Jungle Scene (Standalone)</div>
+<div class="ver-date">2026-07-31</div>
+<ul>
+<li>Amazon rainforest river journey with pixel-art style (no sprites)</li>
+<li>Layer system: sky, mountains, cliff mountains, tropical ridges, Aztec pyramids, far/mid/near forest, hills, river, foreground</li>
+<li>Dynamic weather (clear to thunderstorm), 4 seasons, day/night cycle with sun/moon sky-disk synchronization</li>
+<li>Wildlife easter eggs: gibbons with vines, parrots, butterflies, crocodiles, panther chase, lit tree (thunder/spontaneous)</li>
+<li>Audio-reactive: tree trunk pulsing, water wave amplitude, Tyndall beams, firefly behavior, flower bloom</li>
+<li>Nature sound detection: river energy (mid-freq) and rain energy (high-freq) drive visual effects</li>
+<li>Golden hour cloud lighting with depth-weighted warm orange/pink/gold hues</li>
+<li>Idle weather system: random transitions every 10-18s (no music) or 25-40s (with music)</li>
+</ul>
+</div>
+
+<div class="ver">
+<div class="ver-head">v2.0 - Universe Scene</div>
+<div class="ver-date">2026-07-20</div>
+<ul>
+<li>Galaxy/cosmos visualization with nebula clouds, star fields, and spiral arms</li>
+<li>Triggered by meditation/calm music with low energy and smooth frequency distribution</li>
+<li>Cross-fade transitions with CityTone scene (~0.6s at 60fps)</li>
+<li>Scene locked per-track; no mid-song transitions between CityTone and Universe</li>
+</ul>
+</div>
+
+<div class="ver">
 <div class="ver-head">v1.0 - CityTone</div>
 <div class="ver-date">2026-07-15</div>
 <ul>
@@ -242,19 +360,38 @@ th{background:#161b22;color:#7fdbff}
 </div>
 
 <h2>Architecture</h2>
-<p>CityTone is a single-file application (<code>index.html</code>) containing all HTML, CSS, and JavaScript. No build tools or external dependencies are required.</p>
+<p>CityTone is a single-file application (<code>LaunchPulse.html</code>) containing all HTML, CSS, and JavaScript. No build tools or external dependencies are required. The app auto-detects music style and switches between 3 scenes: CityTone (default), Universe (meditation), and Jungle (nature sounds). A standalone development file (<code>jungle-dev.html</code>) contains the latest jungle scene for iterative development.</p>
+
+<h3>Scene System</h3>
+<table>
+<tr><th>Scene</th><th>Trigger</th><th>Style</th><th>Description</th></tr>
+<tr><td>CityTone</td><td>Default / energetic music</td><td>Pixel-art cityscape</td><td>5-layer parallax city with buildings, weather, seasons, ships, easter eggs</td></tr>
+<tr><td>Universe</td><td>Meditation / calm music</td><td>Cosmic nebula</td><td>Galaxy with star fields, nebula clouds, spiral arms</td></tr>
+<tr><td>Jungle</td><td>Nature sound music</td><td>Pixel-art rainforest</td><td>Amazon river journey with forests, mountains, wildlife, weather</td></tr>
+</table>
 
 <h3>Core Components</h3>
 <table>
 <tr><th>System</th><th>Description</th></tr>
-<tr><td>Celestial Engine</td><td>Sun/moon arc, day/night cycle, star field rotation, 6 sunset palettes</td></tr>
+<tr><td>Scene Detector</td><td>90-frame evaluation window; nature sounds → Jungle, meditation → Universe, other → City</td></tr>
+<tr><td>Celestial Engine</td><td>Sun/moon arc, day/night cycle, star field rotation, 6 sunset palettes (shared CityTone + Jungle)</td></tr>
 <tr><td>City Generator</td><td>5 parallax layers with 24 building variants (incl. jetty, seawall), seeded RNG</td></tr>
-<tr><td>Audio Analyzer</td><td>Web Audio API FFT, 8 frequency bands, per-band energy</td></tr>
-<tr><td>Weather System</td><td>16 conditions, weighted neighbor transitions, enhanced particles</td></tr>
-<tr><td>Season System</td><td>4 seasons with smooth property interpolation, 5 tree shapes</td></tr>
-<tr><td>Water System</td><td>Tides, composite waves, 4 ripple shapes, reflections, sparkles</td></tr>
-<tr><td>Easter Egg Manager</td><td>12 easter eggs: UFO, airplane, asteroid, 4 ships, bridge, fireworks, wheel, zeppelin</td></tr>
+<tr><td>Jungle Engine</td><td>Independent rAF loop, 4-layer cache (bg/mid/hill/anim), 34 draw functions, dynamic weather + seasons</td></tr>
+<tr><td>Audio Analyzer</td><td>Web Audio API FFT, 8 frequency bands, per-band energy; JUNGLE reuses P._freqBands (no redundant FFT)</td></tr>
+<tr><td>Weather System</td><td>16 conditions (CityTone) / 12 jungle conditions, weighted neighbor transitions, enhanced particles</td></tr>
+<tr><td>Season System</td><td>4 seasons with smooth property interpolation, 5 tree shapes (CityTone) / 4 jungle seasons</td></tr>
+<tr><td>Water System</td><td>Tides, composite waves, 4 ripple shapes, reflections, sparkles (CityTone) / river with sun/moon reflections (Jungle)</td></tr>
+<tr><td>Easter Egg Manager</td><td>12 city eggs + 7 jungle wildlife (gibbons, parrots, butterflies, crocodiles, panther, lit tree, fireflies)</td></tr>
 <tr><td>Traffic System</td><td>Road vehicles, boats (5 types), 4 easter-egg ships, high-speed train, elevated highways</td></tr>
+</table>
+
+<h3>Wide-Screen Scaling (v5.0)</h3>
+<table>
+<tr><th>Factor</th><th>Formula</th><th>Range</th><th>Purpose</th></tr>
+<tr><td><code>_resScale</code></td><td>clamp(screenPx / 2M, 0.6, 4.0)</td><td>0.6 – 4.0</td><td>Scales pixel budget and element counts with screen resolution</td></tr>
+<tr><td><code>_wideScale</code></td><td>clamp(ar / 1.78, 1.0, 2.2)</td><td>1.0 – 2.2</td><td>Gives wider-than-16:9 screens more pixels and denser element counts</td></tr>
+<tr><td>BUDGET</td><td>min(2.5M, 380K * _resScale * _wideScale)</td><td>228K – 2.5M</td><td>Total offscreen canvas pixels (capped for performance)</td></tr>
+<tr><td><code>_maxRefresh</code></td><td>3 (standard) / 4 (wide)</td><td>3 – 4</td><td>Per-frame layer refresh cap; wider screens get extra refresh for smoothness</td></tr>
 </table>
 
 <h2>Building Variants</h2>
@@ -389,13 +526,56 @@ dynH=b.h*clamp(0.3+b._smoothEnergy*2.2, 0.3, 2.5);
 <h2>File Structure</h2>
 <pre>
 CityTone/
-  index.html              Main application (single file)
-  README.md               Project overview and GitHub readme
-  dev.html                Development/testing build
-  citytone-intro/         Illustrated introduction page with screenshots
+  LaunchPulse.html          Main application (3 scenes: City, Universe, Jungle)
+  jungle-dev.html           Standalone jungle scene (primary dev platform)
+  galaxy-test.html          Universe scene test harness
+  jungle-test.html          Jungle scene test harness
+  README.md                 Project overview and GitHub readme
+  LICENSE                   MIT license
+  .gitignore                Git ignore rules
+  citytone-intro/           Illustrated introduction page with screenshots
   development-guide/
     development-guide.html  This guide
-  screenshots/            App screenshots for documentation
+  screenshots/              App screenshots for documentation
 </pre>
+
+<h2>Jungle Scene Architecture</h2>
+<p>The jungle scene runs as an independent IIFE module with its own rAF loop, decoupled from the CityTone player. When integrated in <code>LaunchPulse.html</code>, it reads audio data from the main player (<code>P._freqBands</code>, <code>P._energy</code>) instead of its own <code>JUNGLE_AUDIO</code> analyzer.</p>
+
+<h3>Jungle Render Pipeline</h3>
+<pre>
+Layer bg (every 6 frames):
+  drawSky → drawStars → drawSunMoon → drawClouds
+  → drawMountains → drawMountainTrees → drawCliffMountains
+  → drawTropicalMountains → drawAztecPyramids
+  → drawFarForest → drawMidfarForest
+
+Layer hill (every 3 frames):
+  drawHills → drawHillArchitectures → drawWaterfallCliff
+
+Layer mid (every 4 frames):
+  drawMidForest
+
+Layer anim (every 2 frames):
+  drawGround → drawWaterfall → drawRiver → drawBeams
+  → drawForeground → drawWeatherFX
+  → drawGibbons → drawParrots → drawButterflies
+  → drawCrocodiles → drawPantherChase → drawLitTree → drawFireflies
+
+Composite (every frame):
+  clear → drawImage(bg) → drawImage(hill) → drawImage(mid) → drawImage(anim)
+  → golden hour overlay → music energy overlay → beat flash
+</pre>
+
+<h3>Jungle Scroll Speeds</h3>
+<table>
+<tr><th>Layer</th><th>Speed</th><th>Content</th></tr>
+<tr><td>far</td><td>0.02</td><td>Mountains, cliff mountains, tropical ridges, Aztec pyramids, far forest</td></tr>
+<tr><td>midfar</td><td>0.05</td><td>Mid-far forest, ground foreground offset</td></tr>
+<tr><td>mid</td><td>0.12</td><td>Mid forest</td></tr>
+<tr><td>hill</td><td>0.18</td><td>Mossy hills, hill architectures, waterfall cliff</td></tr>
+<tr><td>near</td><td>0.30</td><td>Near forest</td></tr>
+<tr><td>ground</td><td>0.50</td><td>Ground, foreground vegetation</td></tr>
+</table>
 </body>
 </html>

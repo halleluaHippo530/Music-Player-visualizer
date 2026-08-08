@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityTone Prompt Development Manual</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#7fdbff;--code:#e94560;--green:#4ecdc4;--yellow:#f0c674;--purple:#b39ddb;--orange:#ff9e64}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:40px 20px;line-height:1.7;color:var(--text);background:var(--bg)}
+h1{color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:16px;font-size:28px}
+h2{color:var(--green);margin-top:2.5em;font-size:22px;border-bottom:1px solid var(--border);padding-bottom:8px}
+h3{color:var(--accent);font-size:17px;margin-top:1.8em}
+h4{color:var(--yellow);font-size:15px;margin-top:1.4em}
+code{background:var(--card);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--code);font-family:'Fira Code',Consolas,monospace}
+pre{background:var(--card);padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5;border:1px solid var(--border)}
+pre code{background:none;padding:0;color:var(--text)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+th{background:var(--card);color:var(--accent)}
+tr:nth-child(even){background:rgba(22,27,34,0.5)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin:16px 0}
+.card-title{color:var(--yellow);font-weight:bold;margin-bottom:10px}
+.warn{border-left:3px solid var(--code);padding:12px 16px;background:rgba(233,69,96,0.08);border-radius:0 8px 8px 0;margin:16px 0}
+.tip{border-left:3px solid var(--green);padding:12px 16px;background:rgba(78,205,196,0.08);border-radius:0 8px 8px 0;margin:16px 0}
+.prompt-box{background:rgba(127,219,255,0.06);border:1px solid rgba(127,219,255,0.2);border-radius:8px;padding:16px 20px;margin:16px 0;font-size:14px;line-height:1.6}
+.prompt-box::before{content:"PROMPT";display:block;color:var(--accent);font-size:11px;font-weight:bold;letter-spacing:1px;margin-bottom:8px}
+.toc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:32px}
+.toc-title{color:var(--accent);font-weight:bold;margin-bottom:12px;font-size:18px}
+.toc ul{list-style:none;padding-left:0}
+.toc li{padding:3px 0}
+.toc a{color:var(--text)}
+.toc a:hover{color:var(--accent)}
+.permalink{color:var(--border);text-decoration:none;margin-left:8px;font-size:14px}
+.permalink:hover{color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;margin-left:6px}
+.badge-new{background:rgba(78,205,196,0.2);color:var(--green)}
+.badge-perf{background:rgba(240,198,116,0.2);color:var(--yellow)}
+.badge-warn{background:rgba(233,69,96,0.2);color:var(--code)}
+.badge-prompt{background:rgba(179,157,219,0.2);color:var(--purple)}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.checklist{list-style:none;padding-left:0}
+.checklist li{padding:4px 0 4px 24px;position:relative}
+.checklist li::before{content:"[ ]";position:absolute;left:0;color:var(--border);font-family:monospace}
+</style>
+</head>
+<body>
+
+<h1>CityTone Prompt Development Manual</h1>
+<p style="color:#8b949e;font-size:14px">Version 1.0 &middot; Updated 2026-08-06 &middot; AI-assisted development guide for the CityTone visualizer project</p>
+
+<div class="toc">
+<div class="toc-title">Table of Contents</div>
+<ul>
+<li><a href="#intro">1. Introduction</a></li>
+<li><a href="#project-context">2. Providing Project Context</a></li>
+<li><a href="#constraints">3. Hard Constraints in Prompts</a></li>
+<li><a href="#templates">4. Prompt Templates by Task Type</a></li>
+<li><a href="#visual">5. Specifying Visual Requirements</a></li>
+<li><a href="#performance">6. Performance Prompt Patterns</a></li>
+<li><a href="#audio">7. Audio Coupling Prompts</a></li>
+<li><a href="#disco">8. Disco Ball Event Prompts</a></li>
+<li><a href="#testing">9. Testing &amp; Verification Prompts</a></li>
+<li><a href="#antipatterns">10. Anti-Patterns to Avoid</a></li>
+<li><a href="#checklist">11. Pre-Submission Checklist</a></li>
+</ul>
+</div>
+
+<h2 id="intro">1. Introduction <a class="permalink" href="#intro">#</a></h2>
+<p>This manual defines how to write effective AI prompts for developing the CityTone visualizer (<code>LaunchPulse.html</code>). The project is a 748KB single-file HTML5 Canvas application with three auto-detected scenes (City, Universe, Jungle), a full audio player, and a pixel-art rendering engine. Following these patterns will produce correct, performant, constraint-compliant code on the first attempt.</p>
+
+<div class="tip">
+<p><strong>Core principle</strong>: Every prompt should answer three questions — <em>what</em> to change, <em>where</em> in the code, and <em>what constraints</em> apply. Vague prompts produce vague code.</p>
+</div>
+
+<h2 id="project-context">2. Providing Project Context <a class="permalink" href="#project-context">#</a></h2>
+<p>The AI assistant has access to the project memory and recent conversation topics, but explicit context in your prompt improves accuracy. Always include:</p>
+
+<table>
+<tr><th>Context Element</th><th>When to Include</th><th>Example</th></tr>
+<tr><td>Scene name</td><td>Always</td><td>"in the jungle scene" / "in the city scene"</td></tr>
+<tr><td>Module name</td><td>When targeting specific logic</td><td>"in the ToneSync module" / "in the JUNGLE loop"</td></tr>
+<tr><td>Function name</td><td>When modifying existing code</td><td>"in the <code>drawHills</code> function" / "in <code>tickTone()</code>"</td></tr>
+<tr><td>Layer name</td><td>For jungle rendering</td><td>"in the foreground layer" / "in the <code>anim</code> layer"</td></tr>
+<tr><td>File name</td><td>Multi-file changes</td><td>"in <code>LaunchPulse.html</code>" / "in <code>jungle-dev.html</code>"</td></tr>
+</table>
+
+<h3>Context Template</h3>
+<div class="prompt-box">
+In the jungle scene of <code>LaunchPulse.html</code>, modify the <code>drawHills</code> function in the <code>hill</code> layer to [SPECIFIC CHANGE]. The jungle scene uses pixel art (fillRect only, no sprites). Maintain the 4-layer cache system with refresh intervals {bg:6, mid:4, hill:6, anim:2}.
+</div>
+
+<h2 id="constraints">3. Hard Constraints in Prompts <a class="permalink" href="#constraints">#</a></h2>
+<p>The project has non-negotiable constraints. Include the relevant ones in your prompt to prevent violations. The AI may not know all constraints unless stated.</p>
+
+<div class="card">
+<div class="card-title">Visual Constraints</div>
+<ul>
+<li><strong>No sprites</strong>: Jungle uses <code>fillRect</code> pixel art only</li>
+<li><strong>No green in sun glow</strong>: Sun gradient = orange &rarr; white &rarr; sky blue &rarr; purple</li>
+<li><strong>No fireworks in rain</strong>: Rainy weather suppresses fireworks</li>
+<li><strong>No mammals on river</strong>: Jungle river has no swimming mammals</li>
+<li><strong>Mountains higher than buildings</strong>: Background mountains must always be taller</li>
+<li><strong>Music style indicator hidden</strong>: Never display genre labels</li>
+</ul>
+</div>
+
+<div class="card">
+<div class="card-title">Performance Constraints</div>
+<ul>
+<li><strong>_hslCache cap</strong>: Must have 6000-entry cap with auto-clear</li>
+<li><strong>_loop must not stop</strong>: Resilient try-catch, always re-schedule rAF</li>
+<li><strong>_frameBudget BANNED</strong>: No time-budget scheduling (causes starvation)</li>
+<li><strong>Pre-allocated arrays</strong>: <code>_freqBands</code>, <code>_riverCols</code> must be reused, not recreated</li>
+<li><strong>Layer refresh</strong>: <code>_IVL_IDLE = _IVL_MUSIC = {bg:6, mid:4, hill:6, anim:2}</code>, <code>_maxRefresh=3</code></li>
+<li><strong>Starvation prevention</strong>: <code>_STARVE=30</code> — force-refresh after 30 frames</li>
+</ul>
+</div>
+
+<div class="card">
+<div class="card-title">Audio Constraints</div>
+<ul>
+<li><strong>Weather default</strong>: Dynamic weather runs without music</li>
+<li><strong>Rain trigger</strong>: <code>rainEnergy &gt; 0.35</code> sustained 3s &rarr; rain, 5s &rarr; heavy rain</li>
+<li><strong>River boost</strong>: <code>riverEnergy</code> drives <code>flowBoost = 1 + 0.6*riverEnergy</code></li>
+<li><strong>Tree morph</strong>: <code>tH *= 1+0.28*bassEnergy</code>, <code>tW *= 1+0.32*bassEnergy</code>, lerp 0.04</li>
+<li><strong>Day-night cycle</strong>: Cosine-eased <code>_targetNight</code>, lerp 0.012/frame (~70s cycle)</li>
+</ul>
+</div>
+
+<h3>Constraint Template</h3>
+<div class="prompt-box">
+[DESCRIPTION OF CHANGE]. Ensure: (1) pixel art only via fillRect, (2) no green in sun glow, (3) _loop must not stop on error, (4) no _frameBudget scheduling. Test with zero console errors for 10+ seconds.
+</div>
+
+<h2 id="templates">4. Prompt Templates by Task Type <a class="permalink" href="#templates">#</a></h2>
+
+<h3 id="tmpl-feature">4.1 Adding a New Feature</h3>
+<div class="prompt-box">
+Add [FEATURE NAME] to the [SCENE] scene in <code>LaunchPulse.html</code>.
+
+Requirements:
+- [Requirement 1 — what it does]
+- [Requirement 2 — visual style / size / position]
+- [Requirement 3 — audio reactivity if applicable]
+- [Requirement 4 — which layer it belongs to]
+
+Constraints:
+- Use fillRect pixel art (no sprites)
+- Scroll with [SPD.layer_name] in the [layer_name] layer
+- Animate per-frame in drawMusicFX() for smooth motion (no stop-motion)
+- Guard with early-return if feature is inactive
+- Pre-allocate arrays, never create per-frame
+
+Test: Open in browser, verify zero console errors for 15+ seconds, confirm visual appears correctly.
+</div>
+
+<h3 id="tmpl-bugfix">4.2 Fixing a Bug</h3>
+<div class="prompt-box">
+Fix the bug where [BUG DESCRIPTION] in [SCENE/FUNCTION].
+
+Symptoms:
+- [What happens incorrectly]
+- [When it occurs — e.g., "after 2 minutes", "during heavy rain", "at night"]
+
+Expected behavior:
+- [What should happen instead]
+
+Likely cause:
+- [If known: "the _hslCache grows unbounded" / "flame loop returns early"]
+
+Constraints:
+- Do not break existing [RELATED_FEATURE]
+- _loop must remain resilient (try-catch, never stop rAF)
+- Test with [SPECIFIC TEST COMMAND or browser scenario]
+</div>
+
+<h3 id="tmpl-perf">4.3 Performance Optimization</h3>
+<div class="prompt-box">
+Optimize [FUNCTION/LAYER NAME] in the [SCENE] scene for better frame timing.
+
+Current bottleneck:
+- [e.g., "drawHills takes ~200ms per refresh due to path operations"]
+- [e.g., "too many per-pixel fillRects in drawRockVol"]
+
+Optimization approach:
+- [e.g., "cap element counts: max 7 rocks, 2 trees, 4 bushes per hill"]
+- [e.g., "widen slotW to reduce total slots"]
+- [e.g., "batch fillRects by color"]
+
+Constraints:
+- Do NOT use _frameBudget (BANNED — causes bg layer starvation)
+- Do NOT reduce _maxRefresh below 3
+- Do NOT change _IVL intervals (bg:6, mid:4, hill:6, anim:2)
+- Verify: refresh time should drop from [X]ms to [Y]ms or less
+- Test with JUNGLE.dbg() to confirm no starvation
+</div>
+
+<h3 id="tmpl-refactor">4.4 Code Cleanup / Refactoring</h3>
+<div class="prompt-box">
+Clean up dead code in [MODULE/FILE].
+
+Tasks:
+- Remove unused variables: [list if known, e.g., "_sustainedMid, _prevBass, _beatCooldown"]
+- Remove unused functions: [e.g., "fbm2(), pxBandGrad()"]
+- Consolidate redundant checks: [e.g., "multiple musicActive checks in tickTone()"]
+- Batch operations: [e.g., "group Math.pow decay calls during idle"]
+
+Constraints:
+- Do not change any visible behavior
+- Do not remove any function that is called (verify with grep first)
+- All existing features must still work after cleanup
+- Test: zero console errors, visual output unchanged
+</div>
+
+<h3 id="tmpl-visual">4.5 Visual Enhancement</h3>
+<div class="prompt-box">
+Enhance [ELEMENT] in the [SCENE] scene.
+
+Current state:
+- [e.g., "trees are static height, no audio reaction"]
+
+Desired state:
+- [e.g., "tree height AND crown size react to bass frequencies"]
+- [e.g., "tH *= 1+0.28*bassEnergy, tW *= 1+0.32*bassEnergy, lerp rate 0.04"]
+
+Visual specs:
+- Color palette: [e.g., "orange center, white inner, sky blue mid, purple edge"]
+- Size: [e.g., "PX*9 for sky disks"]
+- Position: [e.g., "rises/sets behind mountains following sine arc"]
+- Scroll: [e.g., "SPD.far for background objects"]
+
+Constraints:
+- [Relevant hard constraints from section 3]
+- Test with music playing and without music
+</div>
+
+<h2 id="visual">5. Specifying Visual Requirements <a class="permalink" href="#visual">#</a></h2>
+<p>Visual prompts must be precise about size, color, position, and motion. Ambiguity here causes rework.</p>
+
+<h3>Size Specification</h3>
+<table>
+<tr><th>Unit</th><th>Usage</th><th>Example</th></tr>
+<tr><td><code>P2</code></td><td>Base pixel unit (scales with resolution)</td><td>"animal size P2*2.5"</td></tr>
+<tr><td><code>PX</code></td><td>Pixel scale factor</td><td>"sun/moon size PX*9"</td></tr>
+<tr><td><code>H</code> / <code>W</code></td><td>Canvas height/width fractions</td><td>"baseY = H*0.90"</td></tr>
+<tr><td>Absolute px</td><td>Fixed sizes</td><td>"200px hull"</td></tr>
+</table>
+
+<h3>Color Specification</h3>
+<p>Always specify colors by name or HSL hue. Never use bare hex without context.</p>
+<div class="prompt-box">
+Color palette: orange (hue 20) center, white (hue 195) inner-mid, sky blue (hue 200) mid-outer, purple (hue 280) outer edge. No green in the sun glow.
+</div>
+
+<h3>Motion Specification</h3>
+<table>
+<tr><th>Motion Type</th><th>How to Specify</th></tr>
+<tr><td>Scroll</td><td>"scrolls with SPD.ground" / "scrolls at SPD.far*1.3"</td></tr>
+<tr><td>Bounce</td><td>"bounceSpeed: 0.03+random*0.015, phase: random*PI*2"</td></tr>
+<tr><td>Audio-reactive</td><td>"reacts to bassEnergy with lerp rate 0.04"</td></tr>
+<tr><td>Per-frame</td><td>"draw in drawMusicFX() for smooth 60fps animation"</td></tr>
+<tr><td>Cached layer</td><td>"draw in [layer] refresh, interval N frames"</td></tr>
+</table>
+
+<h2 id="performance">6. Performance Prompt Patterns <a class="permalink" href="#performance">#</a></h2>
+
+<h3>Identifying Bottlenecks</h3>
+<div class="prompt-box">
+Profile the [LAYER/FUNCTION] and identify performance bottlenecks. Use the debug API:
+
+<pre><code>JUNGLE.dbg()  // returns timing, counts, state</code></pre>
+
+Known bottleneck: drawHills (~200ms) due to canvas path operations and per-pixel fillRects in drawRockVol.
+
+Optimize by:
+1. Capping element counts per hill (rocks:7, trees:2, bushes:4)
+2. Widening slotW to reduce total hill slots
+3. Removing _frameBudget variable (BANNED)
+4. Verifying refresh time drops to <60ms
+
+Do NOT reduce _maxRefresh or change _IVL intervals.
+</div>
+
+<h3>Memory Optimization</h3>
+<div class="prompt-box">
+Fix memory growth in [COMPONENT]. Current issue: [e.g., "_hslCache grows unbounded causing crashes after minutes"].
+
+Solution:
+- Add size cap: [e.g., "6000 entries"]
+- Auto-clear when cap reached
+- For arrays: mutate in place instead of creating new objects
+- Pre-allocate: [e.g., "_freqBands must be pre-allocated and reused"]
+
+Test: Run for 5+ minutes, verify no crash and memory stays bounded.
+</div>
+
+<h3>Stop-Motion Prevention</h3>
+<div class="prompt-box">
+Fix stop-motion animation in [ELEMENT]. Current issue: [e.g., "disco spotlights only update every 6 frames due to layer cache"].
+
+Solution:
+- Move animation-critical draws to drawMusicFX() for per-frame rendering
+- Keep static elements in cached layers
+- Use lerp for smooth transitions between cached states
+- Ensure all audio-reactive effects update at 60fps
+
+Constraints:
+- drawMusicFX() runs every frame — keep it lightweight
+- Use early-return guards for inactive features
+- Pre-allocate position arrays
+</div>
+
+<h2 id="audio">7. Audio Coupling Prompts <a class="permalink" href="#audio">#</a></h2>
+
+<h3>Adding Audio-Reactive Elements</h3>
+<div class="prompt-box">
+Make [ELEMENT] react to [AUDIO_METRIC] in the jungle scene.
+
+Audio metric: [e.g., "bassEnergy for tree height", "rainEnergy for weather", "riverEnergy for waterfall"]
+
+Morph formula: [e.g., "tH *= 1 + 0.28 * bassEnergy"]
+Lerp rate: [e.g., "0.04/frame for responsive coupling"]
+
+Implementation:
+1. Read metric from ToneSync.metrics (e.g., m.bassEnergy, m.rainEnergy)
+2. Apply morph in tickTone() or draw function
+3. Use lerp for smooth transitions: current += (target - current) * rate
+
+Constraints:
+- ToneSync is a self-contained IIFE — do not break its API
+- Reset state in reset() function
+- Test with nature sounds (river/rain) AND regular music
+</div>
+
+<h3>Weather Trigger Prompts</h3>
+<div class="prompt-box">
+Add audio-driven weather: [rainEnergy] triggers [rain weather].
+
+Logic:
+- Accumulate when rainEnergy > 0.35 (sustained)
+- 180 frames (3s) → force rain transition
+- 300 frames (5s) → escalate to heavy_rain
+- Decay at 0.96/frame when rain stops
+- Run AFTER _tickWeather to override timer-based selection
+- Anti-flicker: if current weather IS rain, correct target without restarting blend
+
+Variable: _audioRainAccum
+Test: Play rain sound audio, verify weather transitions within 3-5 seconds.
+</div>
+
+<h2 id="disco">8. Disco Ball Event Prompts <a class="permalink" href="#disco">#</a></h2>
+
+<h3>Trigger Conditions</h3>
+<div class="prompt-box">
+Configure the disco ball event trigger.
+
+Conditions (ALL must be true):
+- P._isCityPop && P._cityPopJungle (CityPop music detected)
+- nightF > 0.40 (night time)
+- musicActive (music playing)
+- 60% trigger chance every ~10s (600 frames)
+- Duration: 15-30 seconds (900-1800 frames)
+
+State variable: _discoBall (null when inactive)
+Init function: _initDiscoPitfire()
+Draw function: drawDiscoPitfireGathering(ctx) in drawMusicFX()
+</div>
+
+<h3>Animal Gathering</h3>
+<div class="prompt-box">
+Add [ANIMAL TYPE] to the disco pitfire gathering.
+
+Specifications:
+- Count: [e.g., "2-3 gorillas"]
+- Size: [e.g., "P2*2.5 (largest)"]
+- Position: [e.g., "flanking fire, offX = side*P2*(10+i*4)"]
+- Behavior: [e.g., "sit, bounce with beat, 3 arm poses"]
+- Scroll: SPD.ground (foreground layer)
+- Animation: per-frame in drawMusicFX()
+
+Pixel art requirements:
+- Use fillRect only
+- Silverback silhouette for gorillas
+- Animated tails for monkeys
+- Vine-hanging swing for gibbons
+
+Test: Trigger disco ball (play CityPop at night), verify animals appear, animate smoothly, and scroll with foreground.
+</div>
+
+<h3>Spotlight System</h3>
+<div class="prompt-box">
+Add bat/bird spotlights on gorillas during disco ball event.
+
+Logic:
+- When bats/parrots fly over gorilla screen positions
+- Drop colored cone spotlight (semi-transparent gradient)
+- Colors: rotate through [magenta, cyan, gold, green, purple, orange]
+- Beat-synced pulse: intensity *= 1 + 0.5*beatPulse
+- Spotlight tracks gorilla position (updated per-frame in _discoPitfire.gorillaScreen)
+
+Implementation:
+- Collision check: bat.y < gorilla.y && |bat.x - gorilla.x| < P2*5
+- Draw in drawBatGorillaSpotlights(ctx) called from drawMusicFX()
+- Use ctx.save()/ctx.restore() for blend modes
+</div>
+
+<h2 id="testing">9. Testing &amp; Verification Prompts <a class="permalink" href="#testing">#</a></h2>
+
+<h3>Standard Test Prompt</h3>
+<div class="prompt-box">
+Test the changes in [FILE] after composing the code.
+
+Test steps:
+1. Open [FILE] in browser
+2. Open browser console (F12)
+3. Navigate to [SCENE] via [URL hash or music]
+4. Verify:
+   - Zero console errors for 15+ seconds
+   - [FEATURE] appears and animates correctly
+   - No stop-motion (smooth 60fps)
+   - Scrolling works correctly
+   - Day/night cycle continues
+   - Weather system unaffected
+5. Report any errors found
+
+If errors occur:
+- Do NOT suppress with empty catch
+- Fix the root cause
+- Re-test until zero errors
+</div>
+
+<h3>Performance Test Prompt</h3>
+<div class="prompt-box">
+Verify performance after optimization.
+
+Test:
+1. Open LaunchPulse.html#scene=jungle
+2. Let idle animation run for 60 seconds
+3. Check JUNGLE.dbg() for:
+   - Frame time < 16ms (60fps target)
+   - [LAYER] refresh time < [TARGET]ms
+   - No layer starvation (all layers refresh within _STARVE=30 frames)
+4. Play music with heavy bass
+5. Verify disco ball event triggers at night
+6. Confirm no memory growth (Chrome DevTools > Memory)
+
+Pass criteria: smooth animation, no console errors, no crashes for 5+ minutes.
+</div>
+
+<h3>Debug API Reference</h3>
+<pre><code>// Scene selection via URL hash
+LaunchPulse.html#scene=jungle     // jungle scene
+LaunchPulse.html#scene=city       // city scene
+LaunchPulse.html#scene=galaxy     // universe scene
+
+// Debug commands (browser console)
+window.JUNGLE.dbg()                // state snapshot
+window.JUNGLE.setForceEnergy(0.8)  // simulate music energy
+window.JUNGLE.setTime(0.68)        // jump to night
+window.JUNGLE.setWeather('rain')   // force weather
+window.JUNGLE.suspend()            // pause animation
+window.JUNGLE.resume()             // resume
+
+// Simulate music
+var P = window.player;
+P.isPlaying = true;
+P._freqBands = [0.6,0.5,0.4,0.4,0.3,0.3,0.2,0.2];
+P._energy = 0.7;
+P._isCityPop = true;
+P._cityPopJungle = true;</code></pre>
+
+<h2 id="antipatterns">10. Anti-Patterns to Avoid <a class="permalink" href="#antipatterns">#</a></h2>
+
+<div class="warn">
+<p><strong>Never do these in prompts or code:</strong></p>
+</div>
+
+<table>
+<tr><th>Anti-Pattern</th><th>Why It Fails</th><th>Correct Approach</th></tr>
+<tr>
+<td>"Make it look better"</td>
+<td>No actionable spec — AI guesses</td>
+<td>Specify exact colors, sizes, positions, motion</td>
+</tr>
+<tr>
+<td>"Optimize everything"</td>
+<td>Too broad — causes regressions</td>
+<td>Target specific function/layer with measurable goal</td>
+</tr>
+<tr>
+<td>Using <code>_frameBudget</code></td>
+<td>BANNED — causes bg layer starvation</td>
+<td>Use fixed _IVL intervals + _maxRefresh cap</td>
+</tr>
+<tr>
+<td>Creating arrays per-frame</td>
+<td>GC pressure, frame drops</td>
+<td>Pre-allocate and mutate in place</td>
+</tr>
+<tr>
+<td>Drawing audio-reactive elements in cached layers only</td>
+<td>Stop-motion animation (updates every N frames)</td>
+<td>Draw in drawMusicFX() for per-frame updates</td>
+</tr>
+<tr>
+<td>Using sprites or images</td>
+<td>Violates pixel-art constraint</td>
+<td>Use fillRect exclusively</td>
+</tr>
+<tr>
+<td>Suppressing errors with empty catch</td>
+<td>Hides bugs, causes silent failures</td>
+<td>Log error, count it, skip-ahead after 10 errors</td>
+</tr>
+<tr>
+<td>Changing _IVL intervals without testing</td>
+<td>Can cause layer starvation</td>
+<td>Keep {bg:6, mid:4, hill:6, anim:2} unless explicitly testing</td>
+</tr>
+<tr>
+<td>Adding green to sun glow</td>
+<td>Violates user preference</td>
+<td>Sun gradient: orange &rarr; white &rarr; sky blue &rarr; purple</td>
+</tr>
+<tr>
+<td>"Remove unused code" without grep verification</td>
+<td>May delete called functions</td>
+<td>Always verify with grep before removing</td>
+</tr>
+</table>
+
+<h2 id="checklist">11. Pre-Submission Checklist <a class="permalink" href="#checklist">#</a></h2>
+<p>Before submitting a prompt for code changes, verify it includes:</p>
+
+<ul class="checklist">
+<li>Scene name specified (jungle / city / universe)</li>
+<li>Target function or module named</li>
+<li>Specific change described (not "improve" or "optimize" alone)</li>
+<li>Visual specs: size (P2/PX units), color (hue or name), position (H/W fractions)</li>
+<li>Motion specs: scroll speed, animation type, audio reactivity</li>
+<li>Relevant hard constraints stated explicitly</li>
+<li>Layer assignment: cached layer (bg/mid/hill/anim) or per-frame (drawMusicFX)</li>
+<li>Performance constraints: no _frameBudget, pre-allocate arrays, _loop resilience</li>
+<li>Test instructions: browser scenario, console error check, duration</li>
+<li>Expected outcome: what should be visible after the change</li>
+</ul>
+
+<h3>Quick Reference: Layer Scroll Speeds</h3>
+<pre><code>SPD.far     = 0.015   // mountains, cliffs, tropical ridges
+SPD.midfar  = 0.040   // distant forest
+SPD.mid     = 0.090   // mid forest
+SPD.hill    = 0.140   // hills with rocks/trees/bushes
+SPD.near    = 0.240   // near vegetation
+SPD.ground  = 0.400   // foreground (pitfire gathering, ground plants)</code></pre>
+
+<h3>Quick Reference: Refresh Intervals</h3>
+<pre><code>_IVL_IDLE = _IVL_MUSIC = {
+  bg:   6,   // sky, sun/moon, clouds, distant mountains
+  mid:  4,   // mid forest, waterfalls, river
+  hill: 6,   // hills with rocks, trees, bushes
+  anim: 2    // animals, fireflies, particles, music FX
+}
+_maxRefresh = 3      // max layers refreshed per frame
+_STARVE    = 30     // force-refresh if layer not updated in 30 frames</code></pre>
+
+<hr>
+<p style="color:#8b949e;font-size:13px;text-align:center">CityTone Prompt Development Manual &middot; v1.0 &middot; 2026-08-06</p>
+
+</body>
+</html>

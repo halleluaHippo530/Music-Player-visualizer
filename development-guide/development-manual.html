@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityTone Development Manual</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#7fdbff;--code:#e94560;--green:#4ecdc4;--yellow:#f0c674;--purple:#b39ddb}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:40px 20px;line-height:1.7;color:var(--text);background:var(--bg)}
+h1{color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:16px;font-size:28px}
+h2{color:var(--green);margin-top:2.5em;font-size:22px;border-bottom:1px solid var(--border);padding-bottom:8px}
+h3{color:var(--accent);font-size:17px;margin-top:1.8em}
+h4{color:var(--yellow);font-size:15px;margin-top:1.4em}
+code{background:var(--card);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--code);font-family:'Fira Code',Consolas,monospace}
+pre{background:var(--card);padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5;border:1px solid var(--border)}
+pre code{background:none;padding:0;color:var(--text)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+th{background:var(--card);color:var(--accent)}
+tr:nth-child(even){background:rgba(22,27,34,0.5)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin:16px 0}
+.card-title{color:var(--yellow);font-weight:bold;margin-bottom:10px}
+.warn{border-left:3px solid var(--code);padding:12px 16px;background:rgba(233,69,96,0.08);border-radius:0 8px 8px 0;margin:16px 0}
+.tip{border-left:3px solid var(--green);padding:12px 16px;background:rgba(78,205,196,0.08);border-radius:0 8px 8px 0;margin:16px 0}
+.toc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:32px}
+.toc-title{color:var(--accent);font-weight:bold;margin-bottom:12px;font-size:18px}
+.toc ul{list-style:none;padding-left:0}
+.toc li{padding:3px 0}
+.toc a{color:var(--text)}
+.toc a:hover{color:var(--accent)}
+.permalink{color:var(--border);text-decoration:none;margin-left:8px;font-size:14px}
+.permalink:hover{color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;margin-left:6px}
+.badge-new{background:rgba(78,205,196,0.2);color:var(--green)}
+.badge-perf{background:rgba(240,198,116,0.2);color:var(--yellow)}
+.badge-warn{background:rgba(233,69,96,0.2);color:var(--code)}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+</style>
+</head>
+<body>
+
+<h1>CityTone Development Manual</h1>
+<p style="color:#8b949e;font-size:14px">Version 5.1 &middot; Updated 2026-08-06 &middot; Single-file music visualizer with 3 auto-detected scenes</p>
+
+<div class="toc">
+<div class="toc-title">Table of Contents</div>
+<ul>
+<li><a href="#architecture">1. Architecture Overview</a></li>
+<li><a href="#file-structure">2. File Structure</a></li>
+<li><a href="#modules">3. Core Modules</a></li>
+<li><a href="#tonesync">4. ToneSync Module</a></li>
+<li><a href="#jungle">5. Jungle Scene System</a></li>
+<li><a href="#performance">6. Performance Optimization</a></li>
+<li><a href="#disco">7. Disco Ball Event System</a></li>
+<li><a href="#audio">8. Audio Coupling</a></li>
+<li><a href="#testing">9. Testing & Debugging</a></li>
+<li><a href="#extending">10. Extending the Project</a></li>
+<li><a href="#constraints">11. Hard Constraints</a></li>
+</ul>
+</div>
+
+<h2 id="architecture">1. Architecture Overview <a class="permalink" href="#architecture">#</a></h2>
+<p>CityTone is a single-file HTML5 Canvas application with zero external dependencies. It runs entirely in the browser — no build tools, no npm, no frameworks. The architecture follows a modular IIFE pattern:</p>
+
+<pre><code>LaunchPulse.html (749KB)
+├── CityTone Player (P)        — main music player + city/galaxy visualizer
+├── ToneSync Module            — audio analysis &rarr; morph target computation (IIFE)
+├── JUNGLE Module              — jungle scene visualizer (IIFE, independent rAF loop)
+├── UI Layer                   — playlist, controls, drag-drop
+└── Boot/Hash Processing       — scene selection, test hooks</code></pre>
+
+<div class="card">
+<div class="card-title">Key Design Principles</div>
+<ul>
+<li><strong>Single file</strong>: Everything in one HTML file for zero-friction deployment</li>
+<li><strong>IIFE modules</strong>: ToneSync and JUNGLE are self-contained IIFEs with clean public APIs</li>
+<li><strong>Independent rAF loops</strong>: JUNGLE runs its own <code>requestAnimationFrame</code> loop, decoupled from the main player</li>
+<li><strong>Error resilience</strong>: Both loops use try-catch with error counting — never kill the rAF chain</li>
+<li><strong>Pixel art</strong>: All visuals use <code>fillRect</code> with <code>image-rendering:pixelated</code> — no sprites, no images</li>
+<li><strong>Pre-allocated arrays</strong>: <code>_freqBands</code>, <code>_riverCols</code>, <code>_ffPos</code> are reused to avoid per-frame GC</li>
+</ul>
+</div>
+
+<h2 id="file-structure">2. File Structure <a class="permalink" href="#file-structure">#</a></h2>
+<table>
+<tr><th>File</th><th>Purpose</th><th>Size</th></tr>
+<tr><td><code>LaunchPulse.html</code></td><td>Main application — all 3 scenes, player, UI</td><td>~745KB</td></tr>
+<tr><td><code>disco-ball-test.html</code></td><td>Standalone disco ball verification script</td><td>~4KB</td></tr>
+<tr><td><code>citytone-intro/</code></td><td>Intro/landing page with screenshots</td><td>—</td></tr>
+<tr><td><code>development-guide/</code></td><td>This manual + changelog</td><td>—</td></tr>
+<tr><td><code>screenshots/</code></td><td>Preview images for README</td><td>—</td></tr>
+</table>
+
+<h2 id="modules">3. Core Modules <a class="permalink" href="#modules">#</a></h2>
+
+<h3>CityTone Player (P)</h3>
+<p>The main player object handles:</p>
+<ul>
+<li><strong>Audio playback</strong>: Web Audio API with <code>AnalyserNode</code> for real-time FFT</li>
+<li><strong>Frequency analysis</strong>: 8 normalized bands (0-1) stored in <code>P._freqBands</code></li>
+<li><strong>Scene detection</strong>: 90-frame evaluation window analyzing energy, bass ratio, smoothness, dynamic range, beat presence</li>
+<li><strong>City rendering</strong>: 5 parallax layers, buildings, ships, ferris wheel, weather, seasons, easter eggs</li>
+<li><strong>Galaxy rendering</strong>: 400 stars, 14 solar systems, nebulae, scroll-zoom</li>
+</ul>
+
+<h3>Public API</h3>
+<pre><code>window.player    // P — the main player object
+window.JUNGLE    // JUNGLE module — dev/test access
+
+// JUNGLE public API:
+JUNGLE.ensureSize(w, h)      // resize canvas
+JUNGLE.advance(dt)           // manual frame step (testing)
+JUNGLE.render()              // manual render (testing)
+JUNGLE.setAlpha(a)           // cross-fade opacity
+JUNGLE.start() / stop()      // rAF loop control
+JUNGLE.suspend() / resume()  // pause without killing loop
+JUNGLE.setForceEnergy(v)     // override energy for testing
+JUNGLE.setTime(t)            // jump to time-of-day (0-1)
+JUNGLE.setWeather(w)         // force weather state
+JUNGLE.canvas()              // returns canvas element
+JUNGLE.dbg()                 // returns debug state snapshot</code></pre>
+
+<h2 id="tonesync">4. ToneSync Module <a class="permalink" href="#tonesync">#</a></h2>
+<p>A self-contained IIFE that reads audio data from the player and computes morph targets for visual elements. Located inside the JUNGLE module scope.</p>
+
+<h3>Architecture</h3>
+<pre><code>ToneSync.create(opts) &rarr; {
+  metrics: {        // read-only public state
+    energy, bassEnergy, midEnergy, highEnergy,
+    beatPulse, beatFlag, beatRate,
+    riverEnergy, rainEnergy, natureScore,
+    flowerBoost, musicActive, isCityPop,
+    freqBands[8]
+  },
+  morphs: {         // computed morph targets (0.7-2.2 range)
+    treeH, treeW, mushroomH, mushroomW, templeH
+  },
+  update(dt, player),   // read audio, compute metrics
+  tickTone(dt),         // compute morph targets from metrics
+  reset(),              // clear all state
+  setForceEnergy(v)     // override energy for testing
+}</code></pre>
+
+<h3>Adaptive Beat Detection</h3>
+<div class="card">
+<div class="card-title">Algorithm</div>
+<p>Tracks a rolling bass baseline (<code>_bassBaseline</code>) that adapts to quiet and loud tracks. A beat fires when bass exceeds <strong>both</strong>:</p>
+<ol>
+<li>Absolute minimum threshold (<code>config.beatThreshold = 0.35</code>)</li>
+<li>Adaptive threshold = <code>baseline * beatRatio</code> (catches relative spikes)</li>
+</ol>
+<pre><code>_bassBaseline += (bassEnergy - _bassBaseline) * beatBaselineLerp * dt;
+var adaptiveThreshold = Math.max(config.beatThreshold, _bassBaseline * config.beatRatio);
+if (curBass > adaptiveThreshold && curBass > _prevBass * config.beatRatio && _beatCooldown <= 0) {
+  metrics.beatPulse = 1;
+  metrics.beatFlag = true;
+}</code></pre>
+</div>
+
+<h3>Nature Sound Detection</h3>
+<p>Uses sustained mid/high frequencies with bass + beat suppression:</p>
+<ul>
+<li><strong>River energy</strong>: sustained mid frequencies with low bass (water flow)</li>
+<li><strong>Rain energy</strong>: sustained high frequencies with low bass (broadband hiss)</li>
+<li>Lerp rate <code>0.04</code> for responsive detection</li>
+</ul>
+
+<h3>Configuration</h3>
+<table>
+<tr><th>Parameter</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>bassLerp</code></td><td>0.20</td><td>Bass smoothing rate</td></tr>
+<tr><td><code>beatThreshold</code></td><td>0.35</td><td>Min bass level for beat</td></tr>
+<tr><td><code>beatRatio</code></td><td>1.30</td><td>Bass must exceed prev * ratio</td></tr>
+<tr><td><code>beatCooldown</code></td><td>8</td><td>Frames between beats</td></tr>
+<tr><td><code>beatBaselineLerp</code></td><td>0.012</td><td>Adaptive baseline tracking rate</td></tr>
+<tr><td><code>natureLerp</code></td><td>0.04</td><td>Nature sound detection lerp</td></tr>
+<tr><td><code>treeHMax</code></td><td>1.8</td><td>Max tree height multiplier</td></tr>
+<tr><td><code>templeHMax</code></td><td>1.6</td><td>Max temple height multiplier</td></tr>
+</table>
+
+<h2 id="jungle">5. Jungle Scene System <a class="permalink" href="#jungle">#</a></h2>
+
+<h3>4-Layer Cache System</h3>
+<p>The jungle uses a staggered refresh system to balance visual quality with performance:</p>
+<table>
+<tr><th>Layer</th><th>Contents</th><th>Refresh Interval</th><th>Buffer</th></tr>
+<tr><td><strong>bg</strong></td><td>Sky, stars, sun/moon, clouds, mountains, distant forest</td><td>6 frames</td><td>_bufs.bg</td></tr>
+<tr><td><strong>hill</strong></td><td>Mossy hills, rocks, waterfall cliffs</td><td>6 frames</td><td>_bufs.hill</td></tr>
+<tr><td><strong>mid</strong></td><td>Mid-distance forest</td><td>4 frames</td><td>_bufs.mid</td></tr>
+<tr><td><strong>anim</strong></td><td>Ground, river, foreground, wildlife, weather FX</td><td>2 frames</td><td>_bufs.anim</td></tr>
+</table>
+
+<div class="warn">
+<strong>Starvation Prevention</strong>: Any layer not refreshed in <code>_STARVE=30</code> frames gets force-refreshed, bypassing the <code>_maxRefresh=3</code> cap. This ensures the bg (sky) layer always updates even when hill is slow.
+</div>
+
+<h3>Scroll Speeds</h3>
+<pre><code>var SPD = { far:0.02, midfar:0.05, mid:0.12, hill:0.18, near:0.30, ground:0.50 };</code></pre>
+
+<h3>Per-Frame Music FX Overlay</h3>
+<p>To eliminate stop-motion animation, <code>drawMusicFX()</code> runs every frame on the composite canvas, drawing:</p>
+<ul>
+<li>Tree rhythm glow (14 vertical light pillars)</li>
+<li>Flower bloom sparkles (80 seeds)</li>
+<li>Bass ground pulse</li>
+<li>Temple morph glow</li>
+<li>Temple monkeys (3-5 per temple, beat-synced bounce)</li>
+<li>Disco spotlights (6 colored cones)</li>
+<li>Disco pitfire gathering (gorillas, monkeys, gibbons)</li>
+<li>Disco firefly sparks</li>
+<li>Bat/bird gorilla spotlights</li>
+</ul>
+
+<h2 id="performance">6. Performance Optimization <a class="permalink" href="#performance">#</a></h2>
+
+<h3>Memory Management</h3>
+<table>
+<tr><th>Technique</th><th>Implementation</th></tr>
+<tr><td><strong>HSL cache</strong></td><td><code>_hslCache</code> with 6000-entry cap, auto-clears on overflow</td></tr>
+<tr><td><strong>Array reuse</strong></td><td><code>_riverCols</code>, <code>_freqBands</code>, <code>_ffPos</code> mutated in place</td></tr>
+<tr><td><strong>Batch decay</strong></td><td>Idle metrics use grouped <code>Math.pow</code> calls (d1-d5) instead of per-metric</td></tr>
+<tr><td><strong>Color quantization</strong></td><td>Alpha values rounded to 1/8 increments for fillStyle cache hits</td></tr>
+</table>
+
+<h3>Draw Call Reduction</h3>
+<ul>
+<li><strong>Run batching</strong>: <code>drawRiver</code> batches consecutive columns with identical y-values into single <code>fillRect</code> calls (~5x reduction)</li>
+<li><strong>Culling</strong>: Off-screen elements skipped with <code>sx < -W*0.2 || sx > W*1.2</code></li>
+<li><strong>Idle optimization</strong>: Music-only elements (panther chase, burning trees) skipped when no music; firefly count halved (15 vs 30)</li>
+<li><strong>Cache once</strong>: <code>drawRiver</code> caches <code>skyStops()</code> reflection color once per refresh</li>
+</ul>
+
+<div class="tip">
+<strong>dt Cap</strong>: <code>dt</code> is clamped to [0.25, 3.0] to prevent death spiral when FPS drops. Without this, large dt causes all layers to refresh simultaneously, increasing frame time, increasing dt further.
+</div>
+
+<h2 id="disco">7. Disco Ball Event System <a class="permalink" href="#disco">#</a></h2>
+
+<h3>Trigger Conditions</h3>
+<ul>
+<li>CityPop music detected (<code>P._isCityPop && P._cityPopJungle</code>)</li>
+<li>Night time (<code>nightF > 0.40</code>)</li>
+<li>Music active</li>
+<li>60% trigger chance every ~10s (600 frames)</li>
+<li>Active duration: 15-30 seconds (900-1800 frames)</li>
+</ul>
+
+<h3>Disco Pitfire Gathering</h3>
+<p>When the disco ball activates, <code>_initDiscoPitfire()</code> spawns a campfire gathering in the foreground:</p>
+<table>
+<tr><th>Animal</th><th>Count</th><th>Size</th><th>Behavior</th></tr>
+<tr><td>Gorillas</td><td>2-3</td><td>P2*2.5</td><td>Sit flanking fire, silverback silhouettes, 3 arm poses</td></tr>
+<tr><td>Monkeys</td><td>3-5</td><td>P2*1.2</td><td>Sit in circle, beat-synced bounce, animated tails</td></tr>
+<tr><td>Gibbons</td><td>1-3</td><td>P2*1.8</td><td>Hang from vines above fire, arc swing trajectory</td></tr>
+</table>
+
+<h3>Bat Spotlight System</h3>
+<p>When bats fly over gorillas (<code>dx < P2*8</code>), they drop colored cone spotlights with pulsing ground pools. 6 cycling disco hues, beat-synced cone width.</p>
+
+<h2 id="audio">8. Audio Coupling <a class="permalink" href="#audio">#</a></h2>
+
+<h3>Data Flow</h3>
+<pre><code>Player.update()
+  &rarr; AnalyserNode.getByteFrequencyData()
+  &rarr; P._freqBands[8]  (0-1 normalized)
+  &rarr; P._energy, P._bassEnergy
+
+JUNGLE.advance(dt)
+  &rarr; ToneSync.update(dt, P)     // reads P._freqBands
+  &rarr; ToneSync.tickTone(dt)      // computes morphs
+  &rarr; advance() applies morphs to visual state</code></pre>
+
+<h3>Audio-Driven Weather</h3>
+<p><code>_audioRainAccum</code> accumulates when <code>rainEnergy > 0.35</code>:</p>
+<ul>
+<li>180 frames (3s) &rarr; forces rain weather transition</li>
+<li>300 frames (5s) &rarr; escalates to heavy_rain</li>
+<li>Decays at 0.96/frame when rain stops</li>
+<li>Override runs after <code>_tickWeather</code> to prevent flicker</li>
+</ul>
+
+<h3>Waterfall Flow Boost</h3>
+<pre><code>var flowBoost = 1 + 0.6 * riverEnergy;   // width multiplier
+var foamSpd = 2.6 * (1 + 2.0 * riverEnergy);  // foam speed (up to 3x)</code></pre>
+
+<h2 id="testing">9. Testing & Debugging <a class="permalink" href="#testing">#</a></h2>
+
+<h3>Browser Test</h3>
+<pre><code># Start local server
+python -m http.server 8080
+
+# Open jungle scene
+http://localhost:8080/LaunchPulse.html#scene=jungle
+
+# Debug state
+window.JUNGLE.dbg()
+// Returns: { W, H, energy, treeH, nightF, musicActive, discoBall, ... }</code></pre>
+
+<h3>Simulating Music</h3>
+<pre><code>var P = window.player;
+P.isPlaying = true;
+P.freqData = new Uint8Array(256);
+P._freqBands = [0.6,0.5,0.4,0.4,0.3,0.3,0.2,0.2];
+P._energy = 0.7;
+P._isCityPop = true;
+P._cityPopJungle = true;
+window.JUNGLE.setTime(0.68);  // night time</code></pre>
+
+<h3>Console Error Checking</h3>
+<p>Both loops use resilient error handling:</p>
+<pre><code>try {
+  advance(dt);
+  render();
+  _jungleErrCount = 0;
+} catch(e) {
+  _jungleErrCount++;
+  if (_jungleErrCount <= 5) console.error('[JUNGLE] error:', e.message);
+  if (_jungleErrCount > 10) { fc += dt; scrollT += dt; }  // skip past bad state
+}
+if (_running) _rafId = requestAnimationFrame(_loop);  // always re-schedule</code></pre>
+
+<h2 id="extending">10. Extending the Project <a class="permalink" href="#extending">#</a></h2>
+
+<h3>Adding a New Animal</h3>
+<ol>
+<li>Create <code>_initNewAnimal()</code> function that populates an array with position/phase data</li>
+<li>Create <code>drawNewAnimal()</code> function using <code>fillRect</code> pixel art</li>
+<li>Add the draw call to the <code>anim</code> layer refresh or <code>drawMusicFX()</code> for per-frame</li>
+<li>Cull off-screen: <code>if (sx < -P2*20 || sx > W+P2*20) continue;</code></li>
+<li>Clear array on resize in <code>ensureSize()</code></li>
+</ol>
+
+<h3>Adding a New Weather State</h3>
+<ol>
+<li>Add the weather name to <code>_JWTRANS</code> array with valid transitions</li>
+<li>Add it to <code>_IDLE_WEATHERS</code> if it should appear during idle</li>
+<li>Add intensity helper function (e.g., <code>function newWI() { ... }</code>)</li>
+<li>Add drawing logic in the appropriate layer's draw function</li>
+</ol>
+
+<h3>Adding a New Music FX Overlay</h3>
+<ol>
+<li>Create <code>drawNewFX(ctx)</code> function with early-return guard</li>
+<li>Use <code>ctx.save()</code> / <code>ctx.restore()</code> for blend modes</li>
+<li>Add call in <code>drawMusicFX()</code></li>
+<li>Use pre-allocated arrays for positions — never create per-frame</li>
+</ol>
+
+<h2 id="constraints">11. Hard Constraints <a class="permalink" href="#constraints">#</a></h2>
+<div class="warn">
+<p>The following constraints must never be violated:</p>
+<ul>
+<li><strong>No sprites</strong>: Jungle scene uses pixel art via <code>fillRect</code> only</li>
+<li><strong>No green in sun glow</strong>: Sun gradient is orange &rarr; white &rarr; sky blue &rarr; purple</li>
+<li><strong>No fireworks in rain</strong>: Rainy weather suppresses fireworks</li>
+<li><strong>No mammals on river</strong>: Jungle river has no swimming mammals</li>
+<li><strong>Mountains higher than buildings</strong>: Background mountains must always be taller</li>
+<li><strong>_hslCache cap</strong>: Must have 6000-entry cap with auto-clear</li>
+<li><strong>_loop must not stop</strong>: Resilient try-catch, always re-schedule rAF</li>
+<li><strong>_frameBudget BANNED</strong>: Time-budget scheduling causes bg layer starvation</li>
+<li><strong>Scene locked per-track</strong>: No mid-song transitions between citytone and universe</li>
+</ul>
+</div>
+
+<hr>
+<p style="color:#8b949e;font-size:13px;text-align:center">CityTone Development Manual &middot; v5.1 &middot; 2026-08-06</p>
+
+</body>
+</html>
