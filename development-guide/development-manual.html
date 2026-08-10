@@ -43,7 +43,7 @@ hr{border:none;border-top:1px solid var(--border);margin:2em 0}
 <body>
 
 <h1>CityTone Development Manual</h1>
-<p style="color:#8b949e;font-size:14px">Version 5.1 &middot; Updated 2026-08-06 &middot; Single-file music visualizer with 3 auto-detected scenes</p>
+<p style="color:#8b949e;font-size:14px">Version 5.4.0 &middot; Updated 2026-08-10 &middot; Single-file music visualizer with 3 auto-detected scenes</p>
 
 <div class="toc">
 <div class="toc-title">Table of Contents</div>
@@ -65,7 +65,7 @@ hr{border:none;border-top:1px solid var(--border);margin:2em 0}
 <h2 id="architecture">1. Architecture Overview <a class="permalink" href="#architecture">#</a></h2>
 <p>CityTone is a single-file HTML5 Canvas application with zero external dependencies. It runs entirely in the browser — no build tools, no npm, no frameworks. The architecture follows a modular IIFE pattern:</p>
 
-<pre><code>LaunchPulse.html (749KB)
+<pre><code>LaunchPulse.html (806KB)
 ├── CityTone Player (P)        — main music player + city/galaxy visualizer
 ├── ToneSync Module            — audio analysis &rarr; morph target computation (IIFE)
 ├── JUNGLE Module              — jungle scene visualizer (IIFE, independent rAF loop)
@@ -87,7 +87,7 @@ hr{border:none;border-top:1px solid var(--border);margin:2em 0}
 <h2 id="file-structure">2. File Structure <a class="permalink" href="#file-structure">#</a></h2>
 <table>
 <tr><th>File</th><th>Purpose</th><th>Size</th></tr>
-<tr><td><code>LaunchPulse.html</code></td><td>Main application — all 3 scenes, player, UI</td><td>~745KB</td></tr>
+<tr><td><code>LaunchPulse.html</code></td><td>Main application — all 3 scenes, player, UI</td><td>~806KB</td></tr>
 <tr><td><code>disco-ball-test.html</code></td><td>Standalone disco ball verification script</td><td>~4KB</td></tr>
 <tr><td><code>citytone-intro/</code></td><td>Intro/landing page with screenshots</td><td>—</td></tr>
 <tr><td><code>development-guide/</code></td><td>This manual + changelog</td><td>—</td></tr>
@@ -101,7 +101,7 @@ hr{border:none;border-top:1px solid var(--border);margin:2em 0}
 <ul>
 <li><strong>Audio playback</strong>: Web Audio API with <code>AnalyserNode</code> for real-time FFT</li>
 <li><strong>Frequency analysis</strong>: 8 normalized bands (0-1) stored in <code>P._freqBands</code></li>
-<li><strong>Scene detection</strong>: 90-frame evaluation window analyzing energy, bass ratio, smoothness, dynamic range, beat presence</li>
+<li><strong>Scene detection</strong>: 180-frame (~3s) evaluation window using triple-score comparison (meditation, nature, energetic) with continuous scoring and spectral flatness via coefficient of variation</li>
 <li><strong>City rendering</strong>: 5 parallax layers, buildings, ships, ferris wheel, weather, seasons, easter eggs</li>
 <li><strong>Galaxy rendering</strong>: 400 stars, 14 solar systems, nebulae, scroll-zoom</li>
 </ul>
@@ -120,8 +120,10 @@ JUNGLE.suspend() / resume()  // pause without killing loop
 JUNGLE.setForceEnergy(v)     // override energy for testing
 JUNGLE.setTime(t)            // jump to time-of-day (0-1)
 JUNGLE.setWeather(w)         // force weather state
+JUNGLE.setSyncMode(on)       // enable/disable celestial/weather sync (mixer mode)
+JUNGLE.setSync(data)         // push City's master clock state into JUNGLE
 JUNGLE.canvas()              // returns canvas element
-JUNGLE.dbg()                 // returns debug state snapshot</code></pre>
+JUNGLE.dbg()                 // returns debug state snapshot (includes syncMode)</code></pre>
 
 <h2 id="tonesync">4. ToneSync Module <a class="permalink" href="#tonesync">#</a></h2>
 <p>A self-contained IIFE that reads audio data from the player and computes morph targets for visual elements. Located inside the JUNGLE module scope.</p>
@@ -160,7 +162,19 @@ if (curBass > adaptiveThreshold && curBass > _prevBass * config.beatRatio && _be
 }</code></pre>
 </div>
 
-<h3>Nature Sound Detection</h3>
+<h3>Scene Detection System (v5.3.2 rewrite)</h3>
+<p>Three independent detectors run every frame, each producing a 0-1 score using <strong>continuous (gradual) scoring</strong> instead of binary thresholds:</p>
+<ul>
+<li><strong><code>_detectMeditationMusic()</code></strong>: Spectral flatness (CV-based) + low energy + low bass ratio + low dynamic range + no beats → Galaxy scene</li>
+<li><strong><code>_detectNatureSound()</code></strong>: Spectral flatness + very low bass + high-freq dominance + sustained + no beats → Jungle scene</li>
+<li><strong><code>_detectEnergeticMusic()</code></strong> (new v5.3.2): Strong bass + percussive transients + tonal spectrum + good energy → City scene (positive detection, not just fallback)</li>
+<li><strong><code>_detectRetroMusic()</code></strong> (new v5.3.4, root-cause fix v5.3.9): Uses <strong>three hard gates</strong> — mid-frequency dominance (<code>midRatio &gt; 0.43</code>), moderate energy (<code>0.06–0.24</code>), moderate bass (<code>bassRatio &lt; 0.34</code>) — that return 0 for non-retro music. Only music passing ALL gates scores &gt; 0. Detects 80s synth, city pop, retro wave. Retro score competes with energetic score — if retro is higher, jungle is selected. v5.3.9 replaced previous "participation scoring" that gave ALL music 0.4–0.6 regardless of genre</li>
+<li><strong>Spectral flatness</strong> via coefficient of variation (CV = stddev/mean): <code>flatness = 1/(1+cv*2)</code> — high = noise-like (ambient/nature), low = tonal (music)</li>
+<li><strong>Evaluation window</strong>: 180 frames (~3s) at track start, then scene is locked</li>
+<li><strong>Decision logic</strong>: Picks the scene with the highest average score; nature wins over meditation only if clearly dominant (+0.05); retro wins over energetic if retro score is higher</li>
+</ul>
+
+<h3>Nature Sound Detection (ToneSync Module)</h3>
 <p>Uses sustained mid/high frequencies with bass + beat suppression:</p>
 <ul>
 <li><strong>River energy</strong>: sustained mid frequencies with low bass (water flow)</li>
@@ -177,7 +191,10 @@ if (curBass > adaptiveThreshold && curBass > _prevBass * config.beatRatio && _be
 <tr><td><code>beatCooldown</code></td><td>8</td><td>Frames between beats</td></tr>
 <tr><td><code>beatBaselineLerp</code></td><td>0.012</td><td>Adaptive baseline tracking rate</td></tr>
 <tr><td><code>natureLerp</code></td><td>0.04</td><td>Nature sound detection lerp</td></tr>
-<tr><td><code>treeHMax</code></td><td>1.8</td><td>Max tree height multiplier</td></tr>
+<tr><td><code>treeHMax</code></td><td>2.4</td><td>Max tree height multiplier (raised in v5.2.2)</td></tr>
+<tr><td><code>treeHMaxCityPop</code></td><td>2.8</td><td>Max tree height (CityPop, raised in v5.2.2)</td></tr>
+<tr><td><code>toneLerp</code></td><td>0.09</td><td>Tone morph lerp rate (raised in v5.2.2)</td></tr>
+<tr><td><code>cityPopToneLerp</code></td><td>0.13</td><td>CityPop tone morph lerp rate (raised in v5.2.2)</td></tr>
 <tr><td><code>templeHMax</code></td><td>1.6</td><td>Max temple height multiplier</td></tr>
 </table>
 
@@ -186,43 +203,101 @@ if (curBass > adaptiveThreshold && curBass > _prevBass * config.beatRatio && _be
 <h3>4-Layer Cache System</h3>
 <p>The jungle uses a staggered refresh system to balance visual quality with performance:</p>
 <table>
-<tr><th>Layer</th><th>Contents</th><th>Refresh Interval</th><th>Buffer</th></tr>
-<tr><td><strong>bg</strong></td><td>Sky, stars, sun/moon, clouds, mountains, distant forest</td><td>6 frames</td><td>_bufs.bg</td></tr>
-<tr><td><strong>hill</strong></td><td>Mossy hills, rocks, waterfall cliffs</td><td>6 frames</td><td>_bufs.hill</td></tr>
-<tr><td><strong>mid</strong></td><td>Mid-distance forest</td><td>4 frames</td><td>_bufs.mid</td></tr>
-<tr><td><strong>anim</strong></td><td>Ground, river, foreground, wildlife, weather FX</td><td>2 frames</td><td>_bufs.anim</td></tr>
+<tr><th>Layer</th><th>Contents</th><th>Idle Interval</th><th>Music Interval</th><th>Disco Interval</th><th>Buffer</th></tr>
+<tr><td><strong>bg</strong></td><td>Sky, stars, sun/moon, clouds, mountains, distant forest</td><td>6 frames</td><td>4 frames</td><td>4 frames</td><td>_bufs.bg</td></tr>
+<tr><td><strong>hill</strong></td><td>Mossy hills, rocks, waterfall cliffs</td><td>4 frames</td><td>2 frames</td><td>2 frames</td><td>_bufs.hill</td></tr>
+<tr><td><strong>mid</strong></td><td>Mid-distance forest</td><td>4 frames</td><td>1 frame</td><td>1 frame</td><td>_bufs.mid</td></tr>
+<tr><td><strong>anim</strong></td><td>Ground, river, foreground, wildlife, weather FX</td><td>2 frames</td><td>1 frame</td><td>1 frame</td><td>_bufs.anim</td></tr>
 </table>
 
 <div class="warn">
-<strong>Starvation Prevention</strong>: Any layer not refreshed in <code>_STARVE=30</code> frames gets force-refreshed, bypassing the <code>_maxRefresh=3</code> cap. This ensures the bg (sky) layer always updates even when hill is slow.
+<strong>Starvation Prevention</strong>: Any layer not refreshed in <code>_STARVE=30</code> frames gets force-refreshed, bypassing the <code>_maxRefresh</code> cap (3 idle, 4 during music). All four layers (bg, mid, hill, anim) have starvation protection. The <code>_maxRefresh=4</code> during music ensures all 4 layers can refresh simultaneously when due, eliminating per-cycle stutter.
+</div>
+
+<h3>Tree Sway System (v5.2.2)</h3>
+<p>Trees visibly bend and sway with music via the <code>_treeSway</code> variable, computed every frame in <code>advance()</code>:</p>
+<pre><code>// Music-active sway: beat + bass + mid + wind
+_swayTarget = beatPulse*0.8 + bassEnergy*0.35 + midEnergy*0.15
+            + 0.03*sin(fc*0.015) + 0.02*sin(fc*0.008+1.3)
+_treeSway += (_swayTarget - _treeSway) * min(1, 0.12*dt)
+
+// Applied in _trunk() as quadratic height-scaled offset:
+_swayDir = (_h1(seed*0.9+0.3) > 0.5) ? 1 : -1  // per-tree direction
+_swayOff = _treeSway * h * t * t * _swayDir * 0.12
+totalOffset = lean*t*t + curve + twist + _swayOff
+
+// Crown follows via _crownSwayX(seed, h) helper:
+_crownSwayX = _treeSway * h * _swayDir * 0.12</code></pre>
+<p>Applied to all 8 tree functions: treeEmergent, treePalm, treeTreefern, treeButtress, treeGiant, treeWideLeaf, treeDwarfWide, treeWithered. Crowns, vines, and fronds all offset by <code>_crownSwayX()</code> to follow the trunk bend.</p>
+
+<h3>Sky-Only Buffer (v5.2.3)</h3>
+<p>A dedicated <code>_skyBuf</code> canvas contains only sky elements (gradient, stars, sun/moon, clouds) — no mountains, forests, or terrain. Refreshed alongside the bg buffer whenever bg is stale:</p>
+<pre><code>// In render(), after bg refresh:
+if(_skyBuf){
+  ctx=_skyBuf.ctx; ctx.clearRect(0,0,W,H);
+  drawSky(); drawStars(); drawSunMoon(); drawClouds();
+  ctx=_ovCtx;  // restore
+}</code></pre>
+<p>Exposed via <code>JUNGLE.skyCanvas()</code> for use by <code>P._drawJungleSkyDisk()</code> when L4='jungle' in layer mode. This ensures the jungle sky-disk shows only sky without tropical mountains or ridges overlapping city buildings.</p>
+
+<h3>L4 Three-Way Sky-Disk Toggle (v5.2.3, renamed from L3 in v5.2.4)</h3>
+<p>The L4 (Sky-Disk) layer toggle cycles through three options: City → Universe → Jungle → City.</p>
+<table>
+<tr><th>L4 Value</th><th>Sky-Disk Source</th><th>Rendering</th></tr>
+<tr><td><code>'city'</code></td><td>City sky (drawSky, sun/moon, mountains, clouds, stars)</td><td>Normal city rendering</td></tr>
+<tr><td><code>'universe'</code></td><td>Galaxy (nebulae, stars, planets)</td><td>Drawn as sky background BEFORE buildings (fixes overlay issue)</td></tr>
+<tr><td><code>'jungle'</code></td><td>Jungle sky-only buffer (sky gradient, sun/moon, clouds, stars)</td><td>Drawn via <code>_drawJungleSkyDisk()</code> on city canvas, JUNGLE kept running for buffer updates</td></tr>
+</table>
+
+<h3>L3 Background Layer Toggle (v5.2.4)</h3>
+<p>The L3 (Background) layer toggle cycles through two options: Cityscape ↔ Jungle.</p>
+<table>
+<tr><th>L3 Value</th><th>Background Source</th><th>Rendering</th></tr>
+<tr><td><code>'city'</code></td><td>City distant elements (normal city rendering)</td><td>No additional background layer — city sky-disk handles the backdrop</td></tr>
+<tr><td><code>'jungle'</code></td><td>Jungle bg buffer (sky, mountains, distant forest, pyramids)</td><td>Drawn via <code>_drawJungleBgLayer()</code> on city canvas AFTER sky-disk but BEFORE mid-ground. JUNGLE kept running via <code>_jungleBgLayer</code> flag for buffer updates</td></tr>
+</table>
+<div class="tip">
+<strong>Rendering order in layer mode</strong>: Sky-disk (L4) → Background (L3) → Mid-ground (L2) → Foreground (L1). The sky-disk is drawn first as the base layer, then the background (jungle terrain if L3=jungle) is drawn on top, followed by city buildings and foreground elements. This layering ensures city buildings sit on top of jungle mountains/forest when L3=jungle.
 </div>
 
 <h3>Scroll Speeds</h3>
 <pre><code>var SPD = { far:0.02, midfar:0.05, mid:0.12, hill:0.18, near:0.30, ground:0.50 };</code></pre>
 
 <h3>Per-Frame Music FX Overlay</h3>
-<p>To eliminate stop-motion animation, <code>drawMusicFX()</code> runs every frame on the composite canvas, drawing:</p>
+<p>To eliminate stop-motion animation, <code>drawMusicFX()</code> runs every frame on the composite canvas with ALL effects active during music (v5.2.2 — previously some were throttled to every 2nd frame). v5.2.6 extends this to both player and mixer modes via <code>P._anyAudioPlaying()</code> unified detection:</p>
 <ul>
-<li>Tree rhythm glow (14 vertical light pillars)</li>
-<li>Flower bloom sparkles (80 seeds)</li>
+<li>Tree rhythm glow (18 vertical light pillars, taller and brighter)</li>
+<li>Flower bloom sparkles (80 seeds, every frame)</li>
 <li>Bass ground pulse</li>
-<li>Temple morph glow</li>
-<li>Temple monkeys (3-5 per temple, beat-synced bounce)</li>
+<li>Temple morph glow (every frame)</li>
+<li>Temple monkeys (3-5 per temple, beat-synced bounce, every frame)</li>
 <li>Disco spotlights (6 colored cones)</li>
 <li>Disco pitfire gathering (gorillas, monkeys, gibbons)</li>
 <li>Disco firefly sparks</li>
 <li>Bat/bird gorilla spotlights</li>
 </ul>
+<div class="tip">
+<strong>v5.2.6 Stop-Motion Elimination</strong>: The following throttle points were fixed for both player and mixer modes:
+<ul>
+<li><code>_throttleFrame</code> (weather particles): bypassed when <code>_anyAudioPlaying()</code> — rain/snow now animates at full frame rate during music</li>
+<li>UFO beam activation: bypassed when <code>_anyAudioPlaying()</code> — beam grab/drop sequences are smooth</li>
+<li>Jungle <code>musicActive</code>: uses <code>P._anyAudioPlaying()</code> instead of <code>P.isPlaying</code> — jungle reacts to mixer tracks</li>
+<li><code>_IVL_MUSIC</code>: optimized from <code>{bg:6, mid:2, hill:4, anim:1}</code> to <code>{bg:4, mid:1, hill:2, anim:1}</code></li>
+<li><code>_IVL_DISCO</code>: updated to match <code>_IVL_MUSIC</code> for consistent disco animation</li>
+</ul>
+</div>
 
 <h2 id="performance">6. Performance Optimization <a class="permalink" href="#performance">#</a></h2>
 
 <h3>Memory Management</h3>
 <table>
 <tr><th>Technique</th><th>Implementation</th></tr>
-<tr><td><strong>HSL cache</strong></td><td><code>_hslCache</code> with 6000-entry cap, auto-clears on overflow</td></tr>
-<tr><td><strong>Array reuse</strong></td><td><code>_riverCols</code>, <code>_freqBands</code>, <code>_ffPos</code> mutated in place</td></tr>
+<tr><td><strong>HSL cache (v5.4.0)</strong></td><td><code>Map</code>-based cache with 6000-entry cap, partial eviction (25% oldest). Uses <code>Map.keys()</code> iterator — no array allocation. Previous plain-object cache with <code>delete</code> caused V8 dictionary-mode transition (progressive slowdown)</td></tr>
+<tr><td><strong>Array reuse</strong></td><td><code>_riverCols</code>, <code>_freqBands</code>, <code>_ffPos</code>, <code>_templeTorchSlots</code>, <code>_discoPitfire.gorillaScreen</code> mutated in place with <code>.length=0</code></td></tr>
 <tr><td><strong>Batch decay</strong></td><td>Idle metrics use grouped <code>Math.pow</code> calls (d1-d5) instead of per-metric</td></tr>
 <tr><td><strong>Color quantization</strong></td><td>Alpha values rounded to 1/8 increments for fillStyle cache hits</td></tr>
+<tr><td><strong>No per-frame closures</strong></td><td><code>_drawPanther</code> hoisted to module scope (was inner function in <code>drawPantherChase</code>)</td></tr>
+<tr><td><strong>No per-frame Path2D</strong></td><td>Rain + lightning use <code>ctx.beginPath()</code>/<code>ctx.rect()</code>/<code>ctx.fill()</code> instead of <code>new Path2D()</code></td></tr>
 </table>
 
 <h3>Draw Call Reduction</h3>
@@ -233,20 +308,34 @@ if (curBass > adaptiveThreshold && curBass > _prevBass * config.beatRatio && _be
 <li><strong>Cache once</strong>: <code>drawRiver</code> caches <code>skyStops()</code> reflection color once per refresh</li>
 </ul>
 
+<div class="warn">
+<strong>v5.4.0 dt Cap Fix</strong>: <code>dt</code> is now clamped to [0.25, 5.0] (was [0.25, 3.0]). The previous 3.0 cap caused slow-motion when FPS dropped below 20 — the simulation lost real time. At 5.0, the simulation stays accurate down to 12fps. The death-spiral risk is mitigated by the Map-based hsl cache (eliminates progressive GC pressure) and the staggered layer refresh system (<code>_maxRefresh</code> caps simultaneous refreshes).
+</div>
+
 <div class="tip">
-<strong>dt Cap</strong>: <code>dt</code> is clamped to [0.25, 3.0] to prevent death spiral when FPS drops. Without this, large dt causes all layers to refresh simultaneously, increasing frame time, increasing dt further.
+<strong>v5.4.0 Root Cause of Jungle Slow-Motion</strong>: The jungle <code>hsl()</code> cache used a plain JavaScript object with <code>delete</code> for eviction. After ~6000 entries were added/deleted, V8 transitioned the object to "dictionary mode" where property lookups become O(n) hash-table scans. This caused progressive slowdown specific to the jungle (city/galaxy use a separate cache). Fixed by switching to <code>Map</code> which maintains O(1) lookup regardless of add/delete history.
 </div>
 
 <h2 id="disco">7. Disco Ball Event System <a class="permalink" href="#disco">#</a></h2>
 
 <h3>Trigger Conditions</h3>
 <ul>
-<li>CityPop music detected (<code>P._isCityPop && P._cityPopJungle</code>)</li>
+<li>CityPop music detected (<code>P._isCityPop && P._cityPopJungle</code> — requires user opt-in) OR retro music detected (<code>P._isRetro</code> — automatic spectral detection) — combined as <code>_cpOrRetro</code></li>
 <li>Night time (<code>nightF > 0.40</code>)</li>
 <li>Music active</li>
-<li>60% trigger chance every ~10s (600 frames)</li>
-<li>Active duration: 15-30 seconds (900-1800 frames)</li>
+<li><strong>v5.3.9</strong>: 8% trigger chance every ~50s (3000 frames). The moon normally travels the night sky — disco ball only replaces it for genuine retro/citypop music. All other music = normal moon</li>
+<li>Active duration: 8-15 seconds (480-900 frames)</li>
+<li>Post-event cooldown: 50s (3000 frames)</li>
 </ul>
+<div class="warn">
+<strong>v5.3.9 Hard-Gated Retro Detection — Root Cause Fix</strong>: Previous versions (v5.3.4–v5.3.8b) used "participation scoring" in <code>_detectRetroMusic()</code> where every factor contributed points. This meant ALL music scored 0.4–0.6 regardless of genre — no threshold could fix it because the scoring function itself was broken. v5.3.9 replaces participation scoring with <strong>three hard gates</strong> that return <code>0</code> immediately when key retro characteristics are absent:
+<br><br>
+<strong>Gate 1</strong>: <code>midRatio < 0.43 → return 0</code> — mid-frequency dominance is THE key retro indicator. 80s synth/city pop has synth leads in mids (midRatio 0.44–0.55); modern pop/rock/EDM has midRatio 0.30–0.42<br>
+<strong>Gate 2</strong>: <code>energy < 0.06 || energy > 0.24 → return 0</code> — retro has moderate energy; EDM/rock too loud, ambient too quiet<br>
+<strong>Gate 3</strong>: <code>bassRatio > 0.34 → return 0</code> — retro synth bass is moderate, not dominant like modern EDM/hip-hop
+<br><br>
+Only music passing ALL three gates can score > 0. Pop/rock/EDM/ambient = score 0 = <code>_isRetro</code> false = moon travels normally. Thresholds: per-frame > 0.50, <code>retCount > 42/60</code> (70%), <code>avgRet > 0.50</code>. The CityPop path (<code>_isCityPop</code>) requires user opt-in (<code>_cityPopJungle</code>) and does not auto-trigger.
+</div>
 
 <h3>Disco Pitfire Gathering</h3>
 <p>When the disco ball activates, <code>_initDiscoPitfire()</code> spawns a campfire gathering in the foreground:</p>
@@ -285,6 +374,149 @@ JUNGLE.advance(dt)
 <h3>Waterfall Flow Boost</h3>
 <pre><code>var flowBoost = 1 + 0.6 * riverEnergy;   // width multiplier
 var foamSpd = 2.6 * (1 + 2.0 * riverEnergy);  // foam speed (up to 3x)</code></pre>
+
+<h3>Multi-Track Layer Playback (v5.1.5+, fully decoupled v5.2.0)</h3>
+<p>Up to 5 audio tracks play simultaneously in the mixer, all feeding the shared <code>AnalyserNode</code> for unified visualization. The mixer is <strong>completely independent</strong> from the main player (v5.2.0):</p>
+<pre><code>Audio routing — main player (independent):
+  audioEl &rarr; MediaElementSource &rarr; gainNode &rarr; AnalyserNode &rarr; destination
+
+Audio routing — mixer (5 layers, all independent):
+  audioElMixer &rarr; MediaElementSource &rarr; GainNode (layer 0, dedicated) &rarr; AnalyserNode &rarr; destination
+  audioEl2     &rarr; MediaElementSource &rarr; GainNode (layer 1, dedicated) &rarr; AnalyserNode &rarr; destination
+  audioEl3     &rarr; MediaElementSource &rarr; GainNode (layer 2, dedicated) &rarr; AnalyserNode &rarr; destination
+  audioEl4     &rarr; MediaElementSource &rarr; GainNode (layer 3, dedicated) &rarr; AnalyserNode &rarr; destination
+  audioEl5     &rarr; MediaElementSource &rarr; GainNode (layer 4, dedicated) &rarr; AnalyserNode &rarr; destination
+
+Constants: MAX_LAYERS=5, DEFAULT_LAYERS=4
+
+Mode state (v5.2.7, refined v5.2.8):
+  P._appMode              — 'player' or 'mixer' (mutually exclusive)
+  P.setAppMode(mode)      — THE ONLY portal between modes; stops other mode's audio,
+                            closes its panel, toggles body.mixer-mode CSS class
+
+Mixer master controls (v5.2.8):
+  P._mixerMasterVol       — master mixer volume (0..1), scales all layer gains
+  P.playAllMixer()        — play all loaded paused/stopped mixer tracks
+  P.pauseAllMixer()       — pause all playing mixer tracks (keep position)
+  P.stopAllMixer()        — stop all mixer tracks, reset to beginning
+  P.setMixerMasterVolume(vol) — set master volume, re-applies all layer gains
+  P._anyMixerPlaying()    — returns true if any mixer track is playing
+
+Layer state:
+  P._layerMode            — true when _appMode==='mixer' (set by setAppMode)
+  P._layerVisibleSlots    — how many slots are shown (4 default, up to 5)
+  P._layerEls[5]          — [audioElMixer, audioEl2, audioEl3, audioEl4, audioEl5]
+  P._layerGains[5]        — [gainMixer0, gain1, gain2, gain3, gain4] (all dedicated)
+  P._layerTracks[5]       — track object per layer (or null)
+  P._layerVol[5]          — per-layer volume (0..1), multiplied by _mixerMasterVol
+  P._layerMuted[5]        — per-layer mute state
+  P._layerPlaying[5]      — per-layer playing state (independent from P.isPlaying)</code></pre>
+<ul>
+<li><strong>Single access portal</strong> (v5.2.8): The mode toggle in the topbar is the <strong>only</strong> way to switch between Player and Mixer modes. All other buttons (Playlist, Mixer, Play, Close) only function within their respective mode and do not switch modes</li>
+<li><strong>Player UI hidden in Mixer mode</strong> (v5.2.8): <code>body.mixer-mode</code> CSS class hides <code>.viz-overlay</code> and <code>.playlist-panel</code> via <code>display:none!important</code>. Only the topbar and mixer panel remain visible</li>
+<li><strong>Universal mixer controls</strong> (v5.2.8): Master transport section at the top of the mixer panel with Play All/Pause All toggle, Stop All, and master volume slider (0-100%). <code>setLayerVolume()</code> now applies <code>vol * _mixerMasterVol</code> as effective gain</li>
+<li><strong>Floating mixer button</strong> (v5.2.8, repositioned v5.3.0): When mixer panel is closed in Mixer mode, <code>#mixerFloatBtn</code> appears at bottom-right (<code>right:24px</code>, z-index:105). Clicking it reopens the panel. CSS: <code>body.mixer-mode .mixer-float-btn.visible{display:flex}</code></li>
+<li><strong>Mutually exclusive modes</strong> (v5.2.7): Player and Mixer modes are completely separate. <code>setAppMode(mode)</code> handles all switching logic. File imports are routed based on mode — Player mode → <code>addToPlaylist()</code>, Mixer mode → <code>playLayerFile()</code> to next free slot</li>
+<li><strong>Mode toggle icon</strong> (v5.2.7): Topbar with "CityTone" title and pill-shaped Player/Mixer toggle in top-left corner (z-index:110, position:fixed). Auto-hides with UI after 3s inactivity. Clicking the active mode toggles its panel (v5.2.8)</li>
+<li><strong>Keyboard shortcuts</strong> (v5.2.8): In Mixer mode, Spacebar toggles Play All/Pause All, Arrow Up/Down adjust master mixer volume. In Player mode, Spacebar toggles play/pause, Arrow Up/Down adjust player volume</li>
+<li><strong>Default 4 slots</strong>: Mixer shows L1-L4 by default. "Add Track" button expands to L5 (max). Button hides at MAX_LAYERS</li>
+<li><strong>Per-slot add-file</strong>: Each empty slot has a "+" button that opens file picker. <code>playLayerFile(slot, file)</code> loads directly (bypasses playlist)</li>
+<li><strong>Drag-and-drop</strong>: Files can be dragged onto individual slots (loads to that slot), the mixer panel (assigns to next free slot, auto-expands), or the scene (routed by mode in v5.2.7)</li>
+<li><strong>Dynamic rendering</strong>: <code>updateLayerUI()</code> generates slot HTML dynamically and updates Play All button state; <code>_wireLayerSlotEvents()</code> re-attaches listeners</li>
+<li><strong>Separated file loading</strong> (v5.2.7): <code>fileInput</code> change handler and <code>vizStage</code> drag-drop both route based on <code>_appMode</code>. In Mixer mode, files go to next free mixer slot. In Player mode, files go to playlist. No cross-mode file sharing</li>
+<li><strong>Playback independence</strong> (v5.2.0): Main play/pause only affects <code>audioEl</code>. Mixer play/pause only affects mixer audio elements. Non-primary layers stop on track end. The two systems have no shared playback state</li>
+<li><strong>Volume architecture</strong> (v5.2.0, updated v5.2.8): Master volume (<code>setVolume</code>) only controls <code>gainNode</code> (main player). Each mixer layer effective gain = <code>layerVol * _mixerMasterVol</code> (or 0 if muted). Master mixer volume scales all layers uniformly without affecting the main player</li>
+<li><strong>UI auto-hide</strong>: Mixer panel stays visible when open during auto-hide; main UI hides after 3s inactivity. Floating mixer button is NOT auto-hidden (always visible in Mixer mode when panel is closed)</li>
+<li><strong>Panel toggle buttons</strong> (v5.2.1): Mixer and Playlist buttons grouped in <code>.panel-toggles</code> container in the bottom row, separated from playback controls. Mixer button has cyan accent, track-count badge (<code>_updateMixerBadge()</code>), and subtle glow when active</li>
+<li><strong>Per-layer play/pause</strong> (v5.1.8): Each non-empty slot has its own play/pause button via <code>toggleLayerPlay(slot)</code>. No main player sync (v5.2.0)</li>
+<li><strong>Click-outside-to-hide</strong> (v5.1.8): Document-level click handler hides mixer panel when clicking outside; shows floating button in Mixer mode (v5.2.8). Layer mode stays active</li>
+<li><strong>Slot removal</strong> (v5.1.8): <code>removeLayerSlot(slot)</code> removes empty non-primary slots and shifts tracks down</li>
+<li><strong>Extension-aware validation</strong> (v5.1.8): <code>P._isAudioFile(file)</code> checks both MIME type and file extension for format recognition</li>
+<li><strong>Comprehensive UI redesign</strong> (v5.2.9): Full CSS system overhaul with unified glassmorphism design language:
+<ul>
+<li><strong>Design tokens</strong>: Expanded <code>:root</code> with shadow (<code>--shadow-sm/md/lg</code>), glow (<code>--glow-accent</code>), and radius (<code>--radius-sm/md/lg</code>) tokens</li>
+<li><strong>Unified panel background</strong>: All panels share transparent rgba backgrounds (0.22-0.40 alpha) for sci-fi glassmorphism — the visualizer scene is visible through all UI panels. Backdrop blur at 14-16px softens the background without obscuring it. Border alpha strengthened to 0.15-0.22 to maintain panel definition at low opacity</li>
+<li><strong>Accent bar pattern</strong>: Both mixer slots (<code>.lm-slot.active::before</code>) and playlist items (<code>.pl-item.active::before</code>) use a 3px left accent bar that lights up on active state</li>
+<li><strong>Glowing state indicators</strong>: Playing buttons get green glow (<code>box-shadow:0 0 8px rgba(74,222,128,0.2)</code>), muted buttons get cyan glow, active master controls get cyan glow</li>
+<li><strong>Gradient CTAs</strong>: Browse Files button and play button use <code>--accent-grad</code> fill with layered box-shadows and brightness hover</li>
+<li><strong>Consistent typography</strong>: All button labels use 600-700 font-weight, tabular-nums for volume percentages, letter-spacing for headings</li>
+<li><strong>Enhanced touch targets</strong>: Mixer buttons 30px min, playlist action buttons 34px min on mobile, master volume thumb 18px on mobile</li>
+<li><strong>Interactive progress bar</strong>: Thumb appears on hover/active with scale animation, bar height expands from 6px to 8px</li>
+</ul>
+</li>
+</ul>
+
+<h3>Per-Layer Scene Composition (v5.1.9, updated v5.2.4)</h3>
+<p>The 4 default mixer slots (L1, L2, L3, L4) control the visualizer's scene composition independently. Each slot has a toggle button at the bottom that cycles between scene options:</p>
+<pre><code>Layer scene state:
+  P._layerScenePref[5]  — per-slot scene preference ('city'|'jungle'|'universe')
+  P._citySkipFG         — skip city foreground when L1=jungle
+  P._citySkipMid        — skip city mid-ground when L2=jungle
+  P._citySkipSky        — skip city sky when L4=universe or L4=jungle
+  P._jungleSkyDisk      — L4=jungle: draw jungle sky-only buffer on city canvas
+  P._jungleBgLayer      — L3=jungle: draw jungle bg buffer on city canvas
+  P._layerJungleTarget  — jungle transition target (0..1)
+  P._layerGalaxyTarget  — galaxy transition target (0..1)
+
+Layer mapping:
+  L1 (Foreground):  'city' ↔ 'jungle'  → controls _citySkipFG + jungle anim layer
+  L2 (Mid-Ground):  'city' ↔ 'jungle'  → controls _citySkipMid + jungle hill/mid layers
+  L3 (Background):  'city' ↔ 'jungle'  → controls _jungleBgLayer + jungle bg buffer on city canvas
+  L4 (Sky-Disk):    'city' ↔ 'universe' ↔ 'jungle' → controls _citySkipSky + galaxy overlay + _jungleSkyDisk
+
+Jungle layer mask (JUNGLE.setLayerMask):
+  { bg: false (always hidden in overlay — drawn directly on city canvas via L3/L4), 
+    hill: l2==='jungle', mid: l2==='jungle', anim: l1==='jungle' }
+  Hybrid mode (L1=jungle, L2=city): anim drawn at 92% width, upper 54% hard-erased,
+    gradient fade 54%→64% via destination-out — reveals city mid-ground behind</code></pre>
+<ul>
+<li><strong>Conditional city rendering</strong>: <code>_renderCityscape()</code> wraps sky/mid/foreground draw calls in <code>if(!skipSky)</code>/<code>if(!skipMid)</code>/<code>if(!skipFG)</code> blocks. Early-return for <code>_jungleTransition &gt; 0.99</code> is bypassed in layer mode</li>
+<li><strong>Jungle layer masking</strong>: <code>JUNGLE.setLayerMask({bg, hill, mid, anim})</code> controls which of the 4 cache layers composite during <code>render()</code>. Default: all visible</li>
+<li><strong>Scene mode override</strong>: <code>_updateSceneMode()</code> bypasses auto scene detection in layer mode, using <code>_layerJungleTarget</code>/<code>_layerGalaxyTarget</code> instead</li>
+<li><strong>Hybrid composition</strong>: City canvas always renders as base; jungle layers overlay via jungle canvas with selective masking. Galaxy fly-through continues updating even when jungle is visible</li>
+</ul>
+
+<h3>Mixer Mode Unified Clock (v5.3.3)</h3>
+<p>In Mixer mode, all module slots share the same day-night cycle, weather, season, and volumetric lighting. Toggle options (city&harr;jungle&harr;universe) only change what's rendered &mdash; never the time. Easter eggs in each scape continue using their own spawn timers but read the shared <code>nightF</code>/<code>weather</code> state, so night-only eggs (fireflies, bats, disco ball, lasers) appear/disappear consistently across all scapes.</p>
+<div class="card">
+<div class="card-title">Sync Architecture</div>
+<pre><code>City (P) = Master Clock
+  &boxh;&boxh; updateCelestial()     &rarr; time, nightFactor, sunProgress
+  &boxh;&boxh; transitionWeather()   &rarr; currentWeather, targetWeather, weatherBlend
+  &boxh;&boxh; transitionSeason()    &rarr; currentSeason, targetSeason, seasonBlend
+  &boxvr;&boxh; JUNGLE.setSync({ time, sunProgress, nightFactor, targetNight,
+  &boxv;     currentWeather, prevWeather, targetWeather, weatherBlend,
+  &boxv;     currentSeason, targetSeason, seasonBlend })
+  &boxv;
+JUNGLE (IIFE) = Follower
+  &boxh;&boxh; _syncMode=true  &rarr; _tickCelestial/_tickWeather/_tickSeason return early
+  &boxh;&boxh; setSync()        &rarr; overwrites internal state + render vars (nightF, curW, etc.)
+  &boxh;&boxh; advance()        &rarr; still runs (scroll, easter eggs, FX) but skips clock advance
+  &boxh;&boxh; Easter eggs      &rarr; own timers, but read synced nightF for night-only checks</code></pre>
+</div>
+<div class="tip">
+<strong>Weather mapping</strong>: City weather types not supported by jungle (snow, sleet, hail, dust/sandstorm) are mapped to the closest jungle equivalent via <code>_mapWeatherToJungle()</code> &mdash; snow&rarr;cloudy, sleet&rarr;light_rain, hail&rarr;rain, dust&rarr;foggy.
+</div>
+<ul>
+<li><strong>Sync enable</strong>: <code>setAppMode('mixer')</code> calls <code>JUNGLE.setSyncMode(true)</code> &mdash; disables <code>_forceDaytime</code>, <code>_lockTime</code>, <code>_forceWeather</code></li>
+<li><strong>Sync disable</strong>: <code>setAppMode('player')</code> calls <code>JUNGLE.setSyncMode(false)</code> &mdash; JUNGLE returns to its own independent clock</li>
+<li><strong>Per-frame push</strong>: City's main loop calls <code>JUNGLE.setSync()</code> every frame in mixer mode, after celestial/weather/season updates</li>
+<li><strong>Volumetric lighting consistency</strong>: JUNGLE's <code>_goldenHour()</code> uses synced <code>_sunProgress</code>; <code>drawStars()</code>, mountain/tree/cloud colors all use synced <code>nightF</code></li>
+<li><strong>Easter egg independence</strong>: Disco ball uses its own <code>_discoBallTimer</code> countdown; fireflies use per-frame pulse math; both check <code>nightF &gt; threshold</code> for night-only activation</li>
+<li><strong>Audio-driven weather</strong>: JUNGLE's audio rain override (<code>_audioRainAccum</code>) is skipped in sync mode &mdash; City handles its own audio weather, which then syncs to JUNGLE</li>
+</ul>
+
+<div class="tip">
+<div class="card-title">iOS Safari/Edge Audio Compatibility (v5.3.7)</div>
+<p>iOS Safari and Edge on iPhone/iPad have strict audio policies that require special handling:</p>
+<ul>
+<li><strong>Audio element attributes</strong>: All 6 audio elements use <code>playsinline</code> + <code>webkit-playsinline</code> (prevents forced fullscreen) and <code>preload="metadata"</code> (iOS blocks <code>preload="auto"</code> to save cellular data)</li>
+<li><strong>AudioContext resume chaining</strong>: <code>_ensureAudio()</code> returns <code>audioCtx.resume()</code> promise when suspended. All <code>.play()</code> call sites chain <code>_ensureAudio().then(el.play())</code> — iOS rejects <code>.play()</code> if the AudioContext is not <code>running</code></li>
+<li><strong>Error feedback</strong>: All <code>.catch()</code> handlers show user-facing toast messages ("Playback failed — tap Play again") instead of silent failure</li>
+<li><strong>File validation</strong>: <code>_isAudioFile()</code> validates MIME type + extension before loading — prevents iOS from silently rejecting non-audio files</li>
+<li><strong>Mixer closure safety</strong>: <code>playAllMixer()</code> uses IIFE scope capture for slot index; <code>_layerPlaying[slot]</code> is set inside <code>.then()</code> — prevents false "playing" state if <code>.play()</code> rejects</li>
+</ul>
+</div>
 
 <h2 id="testing">9. Testing & Debugging <a class="permalink" href="#testing">#</a></h2>
 
@@ -362,11 +594,24 @@ if (_running) _rafId = requestAnimationFrame(_loop);  // always re-schedule</cod
 <li><strong>_loop must not stop</strong>: Resilient try-catch, always re-schedule rAF</li>
 <li><strong>_frameBudget BANNED</strong>: Time-budget scheduling causes bg layer starvation</li>
 <li><strong>Scene locked per-track</strong>: No mid-song transitions between citytone and universe</li>
+<li><strong>Max 5 concurrent tracks</strong>: Multi-track layer playback supports up to 5 simultaneous audio files (3 default, expandable to 5)</li>
+<li><strong>Mixer panel on right side</strong> (v5.3.0): Layer mixer panel slides in from the right (<code>right:-360px</code> &rarr; <code>right:0</code>), with <code>border-left</code> and shadow to the left</li>
+<li><strong>No mixer button in Player mode</strong> (v5.3.0): The topbar mode toggle is the sole portal for switching between Player and Mixer modes</li>
+<li><strong>Floating mixer button at bottom-right</strong> (v5.3.0): <code>right:24px</code>, visible only in Mixer mode when panel is closed</li>
+<li><strong>Mixer mode shared clock</strong> (v5.3.3): In Mixer mode, City is the master clock &mdash; all module slots share the same day-night cycle, weather, season, and volumetric lighting. Toggle options only change scapes, not time. JUNGLE's <code>_syncMode</code> must be enabled on mixer entry and disabled on exit</li>
+<li><strong>Easter eggs independent but synced</strong> (v5.3.3): Easter eggs use their own spawn timers but must read the shared <code>nightF</code>/<code>weather</code> state for night-only/weather-dependent activation</li>
+<li><strong>Retro music detection</strong> (v5.3.4, root-cause fix v5.3.9): <code>_detectRetroMusic()</code> uses <strong>three hard gates</strong> (midRatio &gt; 0.43, energy 0.06–0.24, bassRatio &lt; 0.34) that return 0 for non-retro music. Previous "participation scoring" gave ALL music 0.4–0.6 causing false triggers. When detected, jungle scene is auto-selected and easter eggs activate via the combined <code>_cpOrRetro</code> flag. The moon travels normally for all non-retro music</li>
+<li><strong>Easter egg retro reactivity</strong> (v5.3.4): All easter egg triggers (disco ball, campfire gathering, firefly patterns, bat spotlights) use <code>_cpOrRetro</code> (= <code>_isCityPop || _isRetro</code>) instead of <code>_isCityPop</code> alone, so they activate for both citypop opt-in and retro spectral detection</li>
+<li><strong>Hybrid mode full width</strong> (v5.3.4): In mixer mode hybrid rendering (anim-only layer), the jungle foreground canvas is drawn at full screen width (<code>ctx.drawImage(_bufs.anim.cv,0,0)</code>) — no horizontal scaling. Previous 92% scaling caused the jungle scape to not fill the screen width</li>
+<li><strong>Visualizer performance optimization</strong> (v5.3.4, fixed v5.3.5): <code>_IVL_MUSIC</code> intervals are <code>{bg:4, mid:1, hill:2, anim:1}</code> with <code>_maxRefresh=4</code> during music (3 idle). v5.3.4 incorrectly slowed these to <code>{bg:6, mid:2, hill:3, anim:1}</code> with <code>_maxRefresh=3</code>, causing slow-motion — v5.3.5 reverts to the correct values. All four layers (bg, mid, hill, anim) have <code>_STARVE=30</code> starvation protection</li>
+<li><strong>Scene toggle button</strong> (v5.3.5): A City/Jungle scene toggle segment control in the topbar allows manual theme switching in Player mode. When active, <code>_sceneManualOverride=true</code> locks the scene — auto-detection, idle cycling, citypop/retro overrides are skipped. Override cleared on new track or Mixer mode entry. Toggle hidden in Mixer mode via <code>body.mixer-mode .scene-toggle{display:none!important}</code></li>
+<li><strong>Portable device compatibility</strong> (v5.3.6): <code>100dvh</code> (dynamic viewport height) used on <code>.app</code>, <code>.layer-mixer</code>, and mobile <code>html,body</code> — eliminates mobile URL-bar jump. Safe-area insets (<code>env(safe-area-inset-*)</code>) on <code>.mixer-float-btn</code>, <code>.toast</code>, <code>.cp-toggle-bar</code>, <code>.layer-mixer</code>. <code>overscroll-behavior:contain</code> on <code>.pl-list</code> and <code>.lm-slots</code>. Mobile touch targets ≥38-44px. Font sizes ≥11px. Landscape phone layout via <code>@media(orientation:landscape) and (max-height:500px)</code>. <code>orientationchange</code> listener with <code>_forceResize</code> for immediate canvas reflow. Adaptive DPR (cap 2.0 for DPR≥2, 1.5 otherwise). <code>touchcancel</code> handler resets seek state</li>
+<li><strong>GC pressure reduction</strong> (v5.3.6): Pre-bound <code>P._boundLoop</code> eliminates per-frame <code>.bind()</code> allocation. Pooled arrays (<code>_litDWPool</code>, <code>_litListPool</code>, <code>_galDustBuckets</code>, <code>_galStarBuckets</code>) replace per-frame allocations. <code>_hslCache</code> uses 25% partial eviction instead of full clear (both City and JUNGLE caches). Removed redundant <code>getByteFrequencyData</code> in <code>detectTone()</code>. Resize throttle reduced from 15 to 5 frames</li>
 </ul>
 </div>
 
 <hr>
-<p style="color:#8b949e;font-size:13px;text-align:center">CityTone Development Manual &middot; v5.1 &middot; 2026-08-06</p>
+<p style="color:#8b949e;font-size:13px;text-align:center">CityTone Development Manual &middot; v5.3.6 &middot; 2026-08-10</p>
 
 </body>
 </html>

@@ -71,14 +71,14 @@ footer{text-align:center;padding:2rem 0;color:var(--muted);font-size:0.82rem;
 <article class="page">
 
 <h1>CityTone</h1>
-<p class="subtitle">A music-reactive cityscape visualizer</p>
+<p class="subtitle">A music-reactive audio visualizer with three living scenes</p>
 
 <figure class="hero">
   <img src="assets/01_default_view.png" alt="CityTone default view - a sunset cityscape with buildings and water">
-  <figcaption style="text-align:center;font-size:0.82rem;color:var(--muted);padding:0.8rem">The default scene: buildings rise across five parallax layers, reflecting off the water surface</figcaption>
+  <figcaption style="text-align:center;font-size:0.82rem;color:var(--muted);padding:0.8rem">The cityscape scene: buildings rise across five parallax layers, reflecting off the water surface</figcaption>
 </figure>
 
-<p>CityTone transforms your music into a living, breathing urban panorama. Every skyscraper, every cloud, every ripple on the water responds to what you hear. Built as a single HTML file with zero dependencies, it runs anywhere a modern browser does.</p>
+<p>CityTone transforms your music into a living, breathing world. Three scenes auto-detect from your music: a pixel-art <strong>cityscape</strong> with pulsing buildings and dynamic weather, a <strong>jungle</strong> rainforest with Aztec pyramids and waterfalls, and a <strong>galaxy</strong> with procedurally textured planets. Built as a single HTML file with zero dependencies, it runs anywhere a modern browser does.</p>
 
 <h2>Music-Reactive Skyline</h2>
 <p>Buildings across five parallax layers are assigned frequency bands from a real-time FFT analyzer. As your music plays, each building smoothly pulses between 30% and 250% of its base height. Window lights flicker and illuminate dynamically with the beat.</p>
@@ -116,6 +116,30 @@ footer{text-align:center;padding:2rem 0;color:var(--muted);font-size:0.82rem;
   </figure>
 </div>
 
+<h2>Jungle Scene — Aztec Temples & Smooth Rendering</h2>
+<p>A completely redrawn Amazon rainforest river journey with pixel-art style (no sprites). All terrain uses smooth <code>quadraticCurveTo</code> path rendering — matching the cityscape's approach for organic, flowing silhouettes. Ancient Aztec stepped pyramids rise from the jungle canopy with volumetric shading, central stairways, and moss-covered stone blocks.</p>
+
+<div class="figure-grid">
+  <figure>
+    <img src="assets/07_jungle_day.png" alt="Jungle scene daytime with Aztec pyramids">
+    <figcaption>Aztec stepped pyramids visible through the rainforest canopy in daylight</figcaption>
+  </figure>
+  <figure>
+    <img src="assets/08_jungle_night.png" alt="Jungle scene at night with firelight">
+    <figcaption>At night, firelight glows around the temples while stars fill the sky</figcaption>
+  </figure>
+</div>
+
+<h2>Universe Scene — Galaxy Exploration</h2>
+<p>Triggered by meditation and calm music, the scene crossfades into deep space with 400 pixel-art stars, 14 solar systems with procedurally textured planets, drifting nebulae, and asteroid fields. Scroll to zoom into solar systems for exploration.</p>
+
+<div class="figure-grid">
+  <figure>
+    <img src="assets/09_galaxy.png" alt="Galaxy scene with stars and planets">
+    <figcaption>Deep space with parallax starfield, nebulae, and procedurally textured planets</figcaption>
+  </figure>
+</div>
+
 <h2>What Makes It Unique</h2>
 <ul class="features">
   <li><strong>Six cloud types</strong> -- cumulus, stratus, cirrus, cumulonimbus, altocumulus, and cirrocumulus, each at their natural altitude</li>
@@ -131,7 +155,7 @@ footer{text-align:center;padding:2rem 0;color:var(--muted);font-size:0.82rem;
 </ul>
 
 <div class="cta">
-  <p>Open <strong>index.html</strong> in any modern browser. Add your music. Watch the city come alive.</p>
+  <p>Open <strong>LaunchPulse.html</strong> in any modern browser. Add your music. Watch the world come alive.</p>
   <p class="hint">No build tools. No dependencies. No installation. A single HTML file.</p>
 </div>
 
